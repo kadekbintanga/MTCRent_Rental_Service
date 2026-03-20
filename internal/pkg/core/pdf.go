@@ -22,8 +22,8 @@ func (x *PDF) NewGenerator(layout string, data interface{}) {
 	page := wkhtml.NewPageReader(&buffer)
 	page.DisableExternalLinks.Set(true)
 
-	page.HeaderHTML.Set("internal/pkg/layout/components/header.html")
-	page.FooterHTML.Set("internal/pkg/layout/components/footer.html")
+	page.HeaderHTML.Set("internal/pkg/layout/pdf/component/header.html")
+	page.FooterHTML.Set("internal/pkg/layout/pdf/component/footer.html")
 
 	x.PDFG.AddPage(page)
 

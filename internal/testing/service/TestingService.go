@@ -32,8 +32,8 @@ func NewTestingService() TestingService {
 type testingService struct {
 	tx *gorm.DB
 
-	repository         repository.TestingRepository
-	activityRepository port.ActivityRepository
+	repository   repository.TestingRepository
+	activityRepo port.ActivityRepository
 }
 
 func (srv *testingService) SetTransaction(tx *gorm.DB) {
@@ -41,7 +41,7 @@ func (srv *testingService) SetTransaction(tx *gorm.DB) {
 }
 
 func (srv *testingService) SetActivityRepository(repo port.ActivityRepository) {
-	srv.activityRepository = repo
+	srv.activityRepo = repo
 }
 
 func (srv *testingService) Create(form form2.TestingForm) model.Testing {

@@ -38,7 +38,7 @@ func (repo activityRepository) Find(parameters url.Values) ([]model.Activity, in
 /** --- UNEXPORTED FUNCTIONS --- */
 
 func (repo activityRepository) filterByParam(parameters url.Values) *gorm.DB {
-	fromDate, toDate := core.SetDateRange(parameters)
+	fromDate, toDate := core.SetDateRangeFromAPI(parameters)
 
 	query := config.PgSQL.Where(`"createdAt" BETWEEN ? AND ?`, fromDate, toDate)
 

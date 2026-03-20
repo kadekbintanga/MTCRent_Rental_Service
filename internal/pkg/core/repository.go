@@ -5,7 +5,6 @@ import (
 	xtremepkg "github.com/globalxtreme/go-core/v2/pkg"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
-	"net/url"
 	"service/internal/pkg/config"
 	"time"
 )
@@ -14,20 +13,16 @@ type TransactionRepository interface {
 	SetTransaction(tx *gorm.DB)
 }
 
-type FirstIdRepository[M any] interface {
-	FirstById(id any, args ...func(query *gorm.DB) *gorm.DB) M
+type FirstRepository[F any, M any] interface {
+	FirstByForm(form F, args ...func(query *gorm.DB) *gorm.DB) M
 }
 
-type FirstUUIDRepository[M any] interface {
-	FirstByUUID(uuid string, args ...func(query *gorm.DB) *gorm.DB) M
+type FindRepository[F any, M any] interface {
+	FindByForm(form F) []M
 }
 
-type FindRepository[M any] interface {
-	Find(parameter url.Values) []M
-}
-
-type PaginateRepository[M any] interface {
-	Paginate(parameter url.Values) ([]M, interface{}, error)
+type PaginateRepository[F any, M any] interface {
+	PaginateByForm(form F) ([]M, interface{})
 }
 
 type NumberPoolRepository interface {
