@@ -2,23 +2,53 @@ package grpc
 
 import (
 	"context"
-	xtremegrpc "github.com/globalxtreme/go-core/v2/grpc"
-	"service/internal/pkg/config"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
+	"log"
+	"os"
 	"service/internal/pkg/grpc/example"
 	"time"
 )
 
+var (
+	TestingRPCClient example.TestingServiceClient
+
+	TestingRPCActive bool
+)
+
 // TODO: Hanya contoh. nanti langsung hapus saja
-type TestingGRPC struct {
-	xtremegrpc.GRPCClient
-	Testing example.TestingServiceClient
-}
+func InitTestingRPCClient() func() {
+	addr := os.Getenv("GRPC_TESTING_HOST")
 
-func NewTestingGRPC(timeout ...time.Duration) (*TestingGRPC, context.CancelFunc) {
-	client := TestingGRPC{}
-	cleanup := client.RPCDialClient(config.TestingRPC, timeout...)
+	if addr != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
-	client.Testing = example.NewTestingServiceClient(client.Conn)
+		keepaliveParam := keepalive.ClientParameters{
+			Time:                60 * time.Second,
+			Timeout:             20 * time.Second,
+			PermitWithoutStream: true,
+		}
 
-	return &client, cleanup
+		conn, err := grpc.DialContext(ctx, addr,
+			grpc.WithInsecure(),
+			grpc.WithBlock(),
+			grpc.WithKeepaliveParams(keepaliveParam),
+		)
+		if err != nil {
+			log.Panicf("Did not connect to %s: %v", addr, err)
+		}
+
+		TestingRPCClient = example.NewTestingServiceClient(conn)
+
+		TestingRPCActive = true
+
+		cleanup := func() {
+			cancel()
+			conn.Close()
+		}
+
+		return cleanup
+	}
+
+	return func() {}
 }

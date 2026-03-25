@@ -1,89 +1,92 @@
 package saga
 
 import (
+	"context"
 	xtremepkg "github.com/globalxtreme/go-core/v2/pkg"
 	error2 "service/internal/pkg/error"
 	"service/internal/pkg/grpc/example"
 	"service/internal/pkg/saga/grpc"
 	"service/internal/pkg/saga/privateapi"
+	"time"
 )
 
 // TODO: Hanya contoh. nanti langsung hapus saja
-type TestingSaga struct {
-	testingGRPC *grpc.TestingGRPC
-	testingAPI  privateapi.TestingAPI
+type TestingSaga interface {
+	TestingStore(request *example.TestingRequest) (string, []byte)
+	TestingStoreAPI(request *example.TestingRequest) interface{}
 
-	testingGRPCCleanup func()
+	Close()
+	TestingRollbackStore()
+	TestingAPIRollbackStore()
+}
+
+func NewTestingSaga() TestingSaga {
+	return &testingSaga{
+		testingAPI: privateapi.NewTestingAPI(),
+	}
+}
+
+type testingSaga struct {
+	testingAPI privateapi.TestingAPI
 
 	testingRPCRollBack []byte
 	testingAPIRollBack interface{}
 }
 
-/** --- NEW CLIENT --- */
-
-func (saga *TestingSaga) NewTestingClient() {
-	saga.testingGRPC, saga.testingGRPCCleanup = grpc.NewTestingGRPC()
-	saga.testingAPI = privateapi.NewTestingAPI()
-}
-
 /** --- ITEM SERVICE CLIENT --- */
 
-func (saga *TestingSaga) TestingStore(request *example.TestingRequest) (string, []byte) {
-	check, err := saga.testingGRPC.Testing.Store(saga.testingGRPC.Ctx, request)
-	if err != nil {
-		saga.testingGRPC = nil
-		saga.testingGRPCCleanup()
+func (sg *testingSaga) TestingStore(request *example.TestingRequest) (string, []byte) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
+	resp, err := grpc.TestingRPCClient.Store(ctx, request)
+	if err != nil {
 		error2.ErrXtremeTestingSave(err.Error())
 	}
 
-	saga.testingRPCRollBack = check.Result
+	result := resp.GetResult()
 
-	return check.Message, check.Result
+	sg.testingRPCRollBack = result
+
+	return resp.GetMessage(), result
 }
 
-func (saga *TestingSaga) TestingStoreAPI(request *example.TestingRequest) interface{} {
-	resp := saga.testingAPI.Store(request)
+func (sg *testingSaga) TestingStoreAPI(request *example.TestingRequest) interface{} {
+	resp := sg.testingAPI.Store(request)
 	result := resp.Result
 	if result != nil {
-		saga.testingAPIRollBack = result
+		sg.testingAPIRollBack = result
 	}
 
 	return result
 }
 
-func (saga *TestingSaga) TestingRollbackStore() {
-	_, err := saga.testingGRPC.Testing.RollbackStore(saga.testingGRPC.Ctx, &example.RollBackRequest{Data: saga.testingRPCRollBack})
+func (sg *testingSaga) TestingRollbackStore() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := grpc.TestingRPCClient.RollbackStore(ctx, &example.RollBackRequest{Data: sg.testingRPCRollBack})
 	if err != nil {
 		xtremepkg.LogError(err, true)
 	}
 }
 
-func (saga *TestingSaga) TestingAPIRollbackStore() {
-	saga.testingAPI.RollBack(saga.testingAPIRollBack)
+func (sg *testingSaga) TestingAPIRollbackStore() {
+	sg.testingAPI.RollBack(sg.testingAPIRollBack)
 }
 
 /** --- DEFER FUNCTION --- */
 
-func (saga *TestingSaga) Close() {
+func (sg *testingSaga) Close() {
 	if r := recover(); r != nil {
-		if saga.testingGRPC != nil && len(saga.testingRPCRollBack) > 0 {
-			saga.TestingRollbackStore()
-			saga.testingGRPCCleanup()
+		if len(sg.testingRPCRollBack) > 0 {
+			sg.TestingRollbackStore()
 		}
 
-		if saga.testingAPIRollBack != nil {
-			saga.TestingAPIRollbackStore()
+		if sg.testingAPIRollBack != nil {
+			sg.TestingAPIRollbackStore()
 		}
 
 		panic(r)
-	}
-
-	saga.Cleanup()
-}
-
-func (saga *TestingSaga) Cleanup() {
-	if saga.testingGRPC != nil {
-		saga.testingGRPCCleanup()
 	}
 }
