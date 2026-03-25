@@ -18,7 +18,7 @@ import (
 
 // TODO: Hanya contoh. nanti langsung hapus saja
 type TestingRepository interface {
-	core.TransactionRepository
+	core.TransactionInterface
 	core.FirstRepository[form.TestingFilterForm, model.Testing]
 	core.FindRepository[form.TestingFilterForm, model.Testing]
 	core.PaginateRepository[form.TestingFilterForm, model.Testing]

@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-type TransactionRepository interface {
-	SetTransaction(tx *gorm.DB)
-}
-
 type FirstRepository[F any, M any] interface {
 	FirstByForm(form F, args ...func(query *gorm.DB) *gorm.DB) M
 }
@@ -26,14 +22,9 @@ type PaginateRepository[F any, M any] interface {
 }
 
 type NumberPoolRepository interface {
-	TransactionRepository
+	TransactionInterface
 	TakenNumberPool(number ...string) string
 }
-
-// TODO: Re-enable this code after installing github.com/globalxtreme/go-identifier module (If you use GX Identifier for authorization)
-//type EmployeeIdentifierRepository interface {
-//	SetEmployeeIdentifier(employee data.EmployeeIdentifierData)
-//}
 
 func GetIncrementMonthly(model interface{}) int64 {
 	var totalData int64
