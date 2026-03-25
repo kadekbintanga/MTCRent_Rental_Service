@@ -25,7 +25,7 @@ func InitDB(connections ...string) func() {
 	configurations := map[string]connectionConf{
 		CONNECTION_DB_PGSQL: {
 			DBConf: xtremedb.DBConf{
-				Driver:    xtremedb.MYSQL_DRIVER,
+				Driver:    xtremedb.POSTGRESQL_DRIVER,
 				Host:      os.Getenv("DB_HOST"),
 				Port:      os.Getenv("DB_PORT"),
 				Username:  os.Getenv("DB_USERNAME"),
