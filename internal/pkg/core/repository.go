@@ -39,7 +39,7 @@ func GetIncrementMonthly(model interface{}) int64 {
 func Truncate(db *gorm.DB, tables ...schema.Tabler) {
 	if len(tables) > 0 {
 		for _, table := range tables {
-			err := db.Exec(fmt.Sprintf("truncate table %s restart identity cascade", table.TableName()))
+			err := db.Exec(fmt.Sprintf("truncate table %s restart identity cascade", table.TableName())).Error
 			if err != nil {
 				xtremepkg.LogError(fmt.Sprintf("Truncate invalid: %v", err), false)
 			}

@@ -20,3 +20,7 @@ func ErrXtremePermission() {
 func ErrXtremeRole() {
 	xtremeres.Error(http.StatusForbidden, "Role restricted", "", false, nil)
 }
+
+func ErrXtremeINCRNumber(internalMsg string) {
+	xtremeres.Error(http.StatusInternalServerError, "Unable to generate number", internalMsg, false, nil)
+}

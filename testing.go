@@ -27,7 +27,10 @@ func main() {
 		panic(err.Error())
 	}
 
-	//sendRabbitMQ()
+	pad := 10
+	format := fmt.Sprintf("%%0%dd", pad)
+	number := fmt.Sprintf("%s"+format, "Testing", 456)
+	fmt.Println(number)
 }
 
 func getCase1() interface{} {
