@@ -2,13 +2,15 @@ package runner
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+
 	xtremecore "github.com/globalxtreme/go-core/v2"
 	xtremepkg "github.com/globalxtreme/go-core/v2/pkg"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/spf13/cobra"
-	"net/http"
-	"os"
+
 	"service/internal/app/api"
 	"service/internal/pkg/config"
 )
@@ -32,8 +34,8 @@ var rootCmd = &cobra.Command{
 		// TODO: Aktifkan saat up ke operational
 		//xtremedb.Migrate(config.PgSQL, database.Migrations())
 
-		rabbitMQClose := config.InitRabbitMQ()
-		defer rabbitMQClose()
+		// rabbitMQClose := config.InitRabbitMQ()
+		// defer rabbitMQClose()
 
 		logCleanup := xtremepkg.InitLogRPC()
 		defer logCleanup()

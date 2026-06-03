@@ -5,9 +5,12 @@ go 1.22
 require (
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.3
 	github.com/globalxtreme/go-core/v2 v2.1.38
+	github.com/globalxtreme/go-identifier v1.2.1
 	github.com/go-co-op/gocron v1.37.0
+	github.com/go-playground/form/v4 v4.2.1
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/gocraft/work v0.5.1
+	github.com/gomodule/redigo v1.9.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
@@ -28,11 +31,9 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.5 // indirect
-	github.com/go-playground/form/v4 v4.2.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
-	github.com/gomodule/redigo v1.9.2 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect

@@ -1,12 +1,15 @@
 package core
 
-import "gorm.io/gorm"
+import (
+	"github.com/globalxtreme/go-identifier/data"
+	"gorm.io/gorm"
+)
 
 type TransactionInterface interface {
 	SetTransaction(tx *gorm.DB)
 }
 
 // TODO: Re-enable this code after installing github.com/globalxtreme/go-identifier module (If you use GX Identifier for authorization)
-//type EmployeeIdentifierInterface interface {
-//	SetEmployeeIdentifier(employee data.EmployeeIdentifierData)
-//}
+type EmployeeIdentifierInterface interface {
+	SetEmployeeIdentifier(employee data.EmployeeIdentifierData)
+}

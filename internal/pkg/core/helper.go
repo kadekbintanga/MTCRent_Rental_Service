@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -47,4 +48,9 @@ func StrPadLeft(original string, padLength int, padChar rune) string {
 func RandInt(min, max int) int {
 	rand.Seed(time.Now().UnixNano())
 	return rand.Intn(max-min+1) + min
+}
+
+func ToInt(text string) int {
+	value, _ := strconv.Atoi(text)
+	return value
 }
