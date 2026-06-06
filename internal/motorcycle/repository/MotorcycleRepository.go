@@ -24,6 +24,9 @@ type MotorcycleRepository interface {
 
 	Create(form form.MotorcycleForm) model.Motorcycle
 	Update(motorcycle model.Motorcycle, form form.MotorcycleForm) model.Motorcycle
+	UpdateStatus(motorcycle model.Motorcycle, form form.MotorcycleStatusUpdateForm) model.Motorcycle
+	Delete(motorcycle model.Motorcycle)
+	CountByForm(form form.MotorcycleFilterForm) int64
 }
 
 func NewMotorcycleRepository(args ...*gorm.DB) MotorcycleRepository {
@@ -129,6 +132,24 @@ func (repo *motorcycleRepository) UpdateStatus(motorcycle model.Motorcycle, form
 	return motorcycle
 }
 
+func (repo *motorcycleRepository) Delete(motorcycle model.Motorcycle) {
+	err := repo.Transaction.Delete(&motorcycle).Error
+	if err != nil {
+		error2.ErrXtremeMotorcycleDelete(err.Error())
+	}
+}
+
+func (repo *motorcycleRepository) CountByForm(form form.MotorcycleFilterForm) int64 {
+	query := repo.prepareAndFilter(form)
+
+	var count int64
+	err := query.Model(&model.Motorcycle{}).Count(&count).Error
+	if err != nil {
+		error2.ErrXtremeMotorcycleGet(err.Error())
+	}
+	return count
+}
+
 /** --- UNEXPORTED FUNCTIONS --- */
 
 func (repo *motorcycleRepository) prepareAndFilter(form form.MotorcycleFilterForm) *gorm.DB {
@@ -143,7 +164,7 @@ func (repo *motorcycleRepository) prepareAndFilter(form form.MotorcycleFilterFor
 	}
 
 	if form.PlateNumber != "" {
-		query = query.Where(`motorcycles."plateNumber"`, form.PlateNumber)
+		query = query.Where(`UPPER(motorcycles."plateNumber") = ?`, strings.ToUpper(form.PlateNumber))
 	}
 
 	if form.TypeId != 0 {

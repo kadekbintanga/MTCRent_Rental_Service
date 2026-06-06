@@ -15,16 +15,14 @@ import (
 	form2 "service/internal/pkg/form"
 	"service/internal/pkg/model"
 	"service/internal/pkg/parser"
-	"service/internal/pkg/port"
 )
 
 type MotorcycleService interface {
 	SetTransaction(tx *gorm.DB)
 	SetEmployeeIdentifier(employee data.EmployeeIdentifierData)
-	SetActivityRepository(repo port.ActivityRepository)
 
 	Create(form form2.MotorcycleForm) model.Motorcycle
-	Update(filterForm form2.MotorcycleFilterForm, form form2.MotorcycleForm) model.Motorcycle
+	Update(uuid string, form form2.MotorcycleForm) model.Motorcycle
 }
 
 func NewMotorcycleService() MotorcycleService {
@@ -32,10 +30,9 @@ func NewMotorcycleService() MotorcycleService {
 }
 
 type motorcycleService struct {
-	tx           *gorm.DB
-	repository   repository.MotorcycleRepository
-	activityRepo port.ActivityRepository
-	employee     data.EmployeeIdentifierData
+	tx         *gorm.DB
+	repository repository.MotorcycleRepository
+	employee   data.EmployeeIdentifierData
 }
 
 func (srv *motorcycleService) SetTransaction(tx *gorm.DB) {
@@ -46,22 +43,17 @@ func (srv *motorcycleService) SetEmployeeIdentifier(employee data.EmployeeIdenti
 	srv.employee = employee
 }
 
-func (srv *motorcycleService) SetActivityRepository(repo port.ActivityRepository) {
-	srv.activityRepo = repo
-}
-
 func (srv *motorcycleService) Create(form form2.MotorcycleForm) model.Motorcycle {
-	srv.repository = repository.NewMotorcycleRepository()
-	checkPlateNumber := srv.repository.FindByForm(form2.MotorcycleFilterForm{PlateNumber: form.PlateNumber})
-	if len(checkPlateNumber) > 0 {
+	motorcycle := srv.prepare(nil)
+	if srv.checkPlateNumberDuplicate(form.PlateNumber) {
 		error2.ErrXtremeMotorcycleSave("Plate Number has been registered")
 	}
-	brandRepo := repository.NewMotorcycleComponentBrandRepository()
-	brandRepo.FirstByForm(form2.MotorcycleComponentBrandFilterForm{ID: form.BrandId})
+	if !srv.checkBrandExist(form.BrandId) {
+		error2.ErrXtremeMotorcycleSave("Invalid Motorcycle Brand")
+	}
 
-	var motorcycle model.Motorcycle
 	config.PgSQL.Transaction(func(tx *gorm.DB) error {
-		srv.repository = repository.NewMotorcycleRepository(tx)
+		srv.repository.SetTransaction(tx)
 
 		motorcycle = srv.repository.Create(form)
 
@@ -73,20 +65,19 @@ func (srv *motorcycleService) Create(form form2.MotorcycleForm) model.Motorcycle
 	return motorcycle
 }
 
-func (srv *motorcycleService) Update(filterForm form2.MotorcycleFilterForm, form form2.MotorcycleForm) model.Motorcycle {
-	srv.repository = repository.NewMotorcycleRepository()
-	motorcycle := srv.repository.FirstByForm(filterForm)
+func (srv *motorcycleService) Update(uuid string, form form2.MotorcycleForm) model.Motorcycle {
+	motorcycle := srv.prepare(&uuid)
 
 	if strings.ToUpper(motorcycle.PlateNumber) != strings.ToUpper(form.PlateNumber) {
-		checkPlateNumber := srv.repository.FindByForm(form2.MotorcycleFilterForm{PlateNumber: form.PlateNumber})
-		if len(checkPlateNumber) > 0 {
-			error2.ErrXtremeMotorcycleUpdate("New Plate Number has been registered")
+		if srv.checkPlateNumberDuplicate(form.PlateNumber) {
+			error2.ErrXtremeMotorcycleSave("Plate Number has been registered")
 		}
 	}
 
 	if motorcycle.BrandId != form.BrandId {
-		brandRepo := repository.NewMotorcycleComponentBrandRepository()
-		brandRepo.FirstByForm(form2.MotorcycleComponentBrandFilterForm{ID: form.BrandId})
+		if !srv.checkBrandExist(form.BrandId) {
+			error2.ErrXtremeMotorcycleSave("Invalid Motorcycle Brand")
+		}
 	}
 
 	parser := parser.MotorcycleParser{Object: motorcycle}
@@ -103,4 +94,34 @@ func (srv *motorcycleService) Update(filterForm form2.MotorcycleFilterForm, form
 		return nil
 	})
 	return motorcycle
+}
+
+/** --- UNEXPORTED FUNCTIONS --- */
+func (srv *motorcycleService) prepare(uuid *string) model.Motorcycle {
+	srv.repository = repository.NewMotorcycleRepository()
+
+	var motorcycle model.Motorcycle
+	if uuid != nil {
+		motorcycle = srv.repository.FirstByForm(form2.MotorcycleFilterForm{UUID: *uuid})
+	}
+
+	return motorcycle
+}
+
+func (srv *motorcycleService) checkPlateNumberDuplicate(plateNumber string) bool {
+	count := srv.repository.CountByForm(form2.MotorcycleFilterForm{PlateNumber: plateNumber})
+	if count > 0 {
+		return true
+	}
+	return false
+}
+
+func (srv *motorcycleService) checkBrandExist(id int) bool {
+	brandRepo := repository.NewMotorcycleComponentBrandRepository()
+	count := brandRepo.CountByForm(form2.MotorcycleComponentBrandFilterForm{ID: id})
+	if count != 1 {
+		return false
+	}
+
+	return true
 }

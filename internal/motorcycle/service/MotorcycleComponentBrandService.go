@@ -15,16 +15,15 @@ import (
 	form2 "service/internal/pkg/form"
 	"service/internal/pkg/model"
 	"service/internal/pkg/parser"
-	"service/internal/pkg/port"
 )
 
 type MotorcycleComponentBrandService interface {
 	SetTransaction(tx *gorm.DB)
 	SetEmployeeIdentifier(employee data.EmployeeIdentifierData)
-	SetActivityRepository(repo port.ActivityRepository)
 
 	Create(form form2.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand
-	Update(filterForm form2.MotorcycleComponentBrandFilterForm, form form2.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand
+	Update(id int, form form2.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand
+	Delete(id int)
 }
 
 func NewMotorcycleComponentBrandService() MotorcycleComponentBrandService {
@@ -32,10 +31,9 @@ func NewMotorcycleComponentBrandService() MotorcycleComponentBrandService {
 }
 
 type motorcycleComponentBrandService struct {
-	tx           *gorm.DB
-	repository   repository.MotorcycleComponentBrandRepository
-	activityRepo port.ActivityRepository
-	employee     data.EmployeeIdentifierData
+	tx         *gorm.DB
+	repository repository.MotorcycleComponentBrandRepository
+	employee   data.EmployeeIdentifierData
 }
 
 func (srv *motorcycleComponentBrandService) SetTransaction(tx *gorm.DB) {
@@ -46,20 +44,15 @@ func (srv *motorcycleComponentBrandService) SetEmployeeIdentifier(employee data.
 	srv.employee = employee
 }
 
-func (srv *motorcycleComponentBrandService) SetActivityRepository(repo port.ActivityRepository) {
-	srv.activityRepo = repo
-}
-
 func (srv *motorcycleComponentBrandService) Create(form form2.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand {
-	srv.repository = repository.NewMotorcycleComponentBrandRepository()
-	checkMotorcycleBrand := srv.repository.FindByForm(form2.MotorcycleComponentBrandFilterForm{Name: form.Name})
-	if len(checkMotorcycleBrand) > 0 {
-		error2.ErrXtremeMotorcycleBrandSave("Motorcycle Brand Name has been registered")
+	motorcycleBrand := srv.prepare(nil)
+
+	if srv.checkNameDuplicate(form.Name) {
+		error2.ErrXtremeMotorcycleBrandUpdate("Motorcycle Brand Name has been registered")
 	}
 
-	var motorcycleBrand model.MotorcycleComponentBrand
 	config.PgSQL.Transaction(func(tx *gorm.DB) error {
-		srv.repository = repository.NewMotorcycleComponentBrandRepository(tx)
+		srv.repository.SetTransaction(tx)
 
 		motorcycleBrand = srv.repository.Create(form)
 
@@ -71,13 +64,11 @@ func (srv *motorcycleComponentBrandService) Create(form form2.MotorcycleComponen
 	return motorcycleBrand
 }
 
-func (srv *motorcycleComponentBrandService) Update(filterForm form2.MotorcycleComponentBrandFilterForm, form form2.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand {
-	srv.repository = repository.NewMotorcycleComponentBrandRepository()
-	motorcycleBrand := srv.repository.FirstByForm(filterForm)
+func (srv *motorcycleComponentBrandService) Update(id int, form form2.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand {
+	motorcycleBrand := srv.prepare(&id)
 
 	if strings.ToUpper(motorcycleBrand.Name) != strings.ToUpper(form.Name) {
-		checkMotorcycleBrandName := srv.repository.FindByForm(form2.MotorcycleComponentBrandFilterForm{Name: form.Name})
-		if len(checkMotorcycleBrandName) > 0 {
+		if srv.checkNameDuplicate(form.Name) {
 			error2.ErrXtremeMotorcycleBrandUpdate("Motorcycle Brand Name has been registered")
 		}
 	}
@@ -96,4 +87,56 @@ func (srv *motorcycleComponentBrandService) Update(filterForm form2.MotorcycleCo
 		return nil
 	})
 	return motorcycleBrand
+}
+
+func (srv *motorcycleComponentBrandService) Delete(id int) {
+	motorcycleBrand := srv.prepare(nil)
+
+	motorcycleBrand = srv.repository.FirstByForm(form2.MotorcycleComponentBrandFilterForm{ID: id, Preloads: []string{"Motorcycles"}})
+	if motorcycleBrand.Default == true {
+		error2.ErrXtremeMotorcycleBrandDelete("Cannot delete default brand", nil)
+	}
+
+	if len(motorcycleBrand.Motorcycles) > 0 {
+		attributes := []map[string]interface{}{}
+		for _, motorcycle := range motorcycleBrand.Motorcycles {
+			attributes = append(attributes, map[string]interface{}{
+				"uuid":       motorcycle.UUID,
+				"name":       motorcycle.Name,
+				"platNumber": motorcycle.PlateNumber,
+			})
+		}
+		error2.ErrXtremeMotorcycleBrandDelete("Cannot delete brand, because it has motorcycles", attributes)
+	}
+
+	config.PgSQL.Transaction(func(tx *gorm.DB) error {
+		srv.repository.SetTransaction(tx)
+		srv.repository.Delete(motorcycleBrand)
+
+		activity.UseActivity{Employee: srv.employee, Action: constant.ACTION_DELETE}.SetReference(motorcycleBrand).
+			Save(fmt.Sprintf("Delete Motorcycle component Brand %s [%d]", motorcycleBrand.Name, motorcycleBrand.ID))
+
+		return nil
+	})
+}
+
+/** --- UNEXPORTED FUNCTIONS --- */
+
+func (srv *motorcycleComponentBrandService) prepare(id *int) model.MotorcycleComponentBrand {
+	srv.repository = repository.NewMotorcycleComponentBrandRepository()
+
+	var motorcycleBrand model.MotorcycleComponentBrand
+	if id != nil {
+		motorcycleBrand = srv.repository.FirstByForm(form2.MotorcycleComponentBrandFilterForm{ID: *id})
+	}
+
+	return motorcycleBrand
+}
+
+func (srv *motorcycleComponentBrandService) checkNameDuplicate(name string) bool {
+	count := srv.repository.CountByForm(form2.MotorcycleComponentBrandFilterForm{Name: name})
+	if count > 0 {
+		return true
+	}
+	return false
 }

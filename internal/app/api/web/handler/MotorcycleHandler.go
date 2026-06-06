@@ -7,7 +7,6 @@ import (
 	"github.com/globalxtreme/go-identifier/data"
 	"github.com/gorilla/mux"
 
-	repository2 "service/internal/activity/repository"
 	"service/internal/motorcycle/repository"
 	"service/internal/motorcycle/service"
 	form2 "service/internal/pkg/form"
@@ -53,7 +52,6 @@ func (ctr MotorcycleHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	srv := service.NewMotorcycleService()
 	srv.SetEmployeeIdentifier(data.AuthEmployee(r))
-	srv.SetActivityRepository(repository2.NewActivityRepository())
 
 	motorcycle := srv.Create(form)
 
@@ -63,18 +61,14 @@ func (ctr MotorcycleHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctr MotorcycleHandler) Update(w http.ResponseWriter, r *http.Request) {
-	formFilter := form2.MotorcycleFilterForm{
-		UUID: mux.Vars(r)["uuid"],
-	}
 	form := form2.MotorcycleForm{}
 	form.APIParse(r)
 	form.Validate()
 
 	srv := service.NewMotorcycleService()
 	srv.SetEmployeeIdentifier(data.AuthEmployee(r))
-	srv.SetActivityRepository(repository2.NewActivityRepository())
 
-	motorcycle := srv.Update(formFilter, form)
+	motorcycle := srv.Update(mux.Vars(r)["uuid"], form)
 
 	psr := parser.MotorcycleParser{Object: motorcycle}
 	res := xtremeres.Response{Object: psr.First()}

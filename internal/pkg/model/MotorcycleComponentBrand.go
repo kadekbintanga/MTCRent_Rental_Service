@@ -6,7 +6,8 @@ import (
 
 type MotorcycleComponentBrand struct {
 	xtrememodel.BaseModel
-	Name string `gorm:"column:name;type:varchar(250);not null"`
+	Name    string `gorm:"column:name;type:varchar(250);not null"`
+	Default bool   `gorm:"column:default"`
 
 	Motorcycles []Motorcycle `gorm:"foreignKey:brandId"`
 }

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+
+package customer;
+
+
+option go_package = "internal/pkg/grpc/customer";
+
+
+
+message CTResponse {
+  string message = 1;
+  bytes result = 2;
+}

@@ -2,8 +2,6 @@ package service
 
 import (
 	"fmt"
-	xtremefs "github.com/globalxtreme/go-core/v2/filesystem"
-	"gorm.io/gorm"
 	"service/internal/pkg/activity"
 	"service/internal/pkg/config"
 	"service/internal/pkg/constant"
@@ -12,6 +10,9 @@ import (
 	"service/internal/pkg/model"
 	"service/internal/pkg/port"
 	"service/internal/testing/repository"
+
+	xtremefs "github.com/globalxtreme/go-core/v2/filesystem"
+	"gorm.io/gorm"
 )
 
 // TODO: Hanya contoh. nanti langsung hapus saja

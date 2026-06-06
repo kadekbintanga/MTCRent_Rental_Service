@@ -7,12 +7,13 @@ import (
 )
 
 type MotorcycleComponentBrandFilterForm struct {
-	ID     int
-	Name   string
-	Search string
-	Orders map[string]string
-	Page   int
-	Limit  int
+	ID       int
+	Name     string
+	Search   string
+	Orders   map[string]string
+	Preloads []string
+	Page     int
+	Limit    int
 }
 
 func (f *MotorcycleComponentBrandFilterForm) FilterParse(parameter url.Values) {

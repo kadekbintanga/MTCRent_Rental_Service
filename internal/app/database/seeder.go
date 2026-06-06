@@ -13,6 +13,8 @@ type data struct {
 func Seeder() {
 	seeders := []data{
 		{&seeder.TestingSeeder{}},
+		{&seeder.SettingConfiguration{}},
+		{&seeder.MotorcycleComponentBrandDefault{}},
 	}
 
 	for _, seed := range seeders {

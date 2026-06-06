@@ -54,3 +54,8 @@ func ToInt(text string) int {
 	value, _ := strconv.Atoi(text)
 	return value
 }
+
+func ToDate(text string) time.Time {
+	value, _ := time.Parse("2006-01-02", text)
+	return value
+}

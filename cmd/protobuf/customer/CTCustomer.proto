@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+
+package customer;
+
+
+option go_package = "internal/pkg/grpc/customer";
+
+import "CTResponse.proto";
+
+
+service CustomerService {
+    rpc FirstByUUID(FirstCustomerRequest) returns (CTResponse) {}
+}
+
+
+message FirstCustomerRequest {
+    string uuid = 1;
+}

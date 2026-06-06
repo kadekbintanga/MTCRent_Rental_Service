@@ -24,6 +24,8 @@ type MotorcycleComponentBrandRepository interface {
 
 	Create(form form.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand
 	Update(brand model.MotorcycleComponentBrand, form form.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand
+	Delete(brand model.MotorcycleComponentBrand)
+	CountByForm(form form.MotorcycleComponentBrandFilterForm) int64
 }
 
 func NewMotorcycleComponentBrandRepository(args ...*gorm.DB) MotorcycleComponentBrandRepository {
@@ -87,7 +89,8 @@ func (repo *motorcycleComponentBrandRepository) PaginateByForm(form form.Motorcy
 
 func (repo *motorcycleComponentBrandRepository) Create(form form.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand {
 	motorcycleBrand := model.MotorcycleComponentBrand{
-		Name: strings.ToUpper(form.Name),
+		Name:    strings.ToUpper(form.Name),
+		Default: false,
 	}
 
 	err := repo.Transaction.Create(&motorcycleBrand).Error
@@ -106,6 +109,25 @@ func (repo *motorcycleComponentBrandRepository) Update(brand model.MotorcycleCom
 		error2.ErrXtremeMotorcycleBrandUpdate(err.Error())
 	}
 	return brand
+}
+
+func (repo *motorcycleComponentBrandRepository) Delete(brand model.MotorcycleComponentBrand) {
+	err := repo.Transaction.Delete(&brand).Error
+	if err != nil {
+		error2.ErrXtremeMotorcycleBrandDelete(err.Error(), nil)
+	}
+}
+
+func (repo *motorcycleComponentBrandRepository) CountByForm(form form.MotorcycleComponentBrandFilterForm) int64 {
+	query := repo.prepareAndFilter(form)
+
+	var count int64
+	err := query.Model(&model.MotorcycleComponentBrand{}).Count(&count).Error
+	if err != nil {
+		error2.ErrXtremeMotorcycleBrandGet(err.Error())
+	}
+	return count
+
 }
 
 /** --- UNEXPORTED FUNCTIONS --- */
@@ -132,6 +154,12 @@ func (repo *motorcycleComponentBrandRepository) prepareAndFilter(form form.Motor
 		}
 	} else {
 		query = query.Order("id DESC")
+	}
+
+	if len(form.Preloads) > 0 {
+		for _, preload := range form.Preloads {
+			query = query.Preload(preload)
+		}
 	}
 
 	return query

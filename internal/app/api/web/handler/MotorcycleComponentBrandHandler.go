@@ -7,7 +7,6 @@ import (
 	"github.com/globalxtreme/go-identifier/data"
 	"github.com/gorilla/mux"
 
-	repository2 "service/internal/activity/repository"
 	"service/internal/motorcycle/repository"
 	"service/internal/motorcycle/service"
 	"service/internal/pkg/core"
@@ -40,7 +39,6 @@ func (ctr MotorcycleComponentBrandHandler) Create(w http.ResponseWriter, r *http
 
 	srv := service.NewMotorcycleComponentBrandService()
 	srv.SetEmployeeIdentifier(data.AuthEmployee(r))
-	srv.SetActivityRepository(repository2.NewActivityRepository())
 
 	motorcycleBrand := srv.Create(form)
 
@@ -50,21 +48,26 @@ func (ctr MotorcycleComponentBrandHandler) Create(w http.ResponseWriter, r *http
 }
 
 func (ctr MotorcycleComponentBrandHandler) Update(w http.ResponseWriter, r *http.Request) {
-	formFilter := form2.MotorcycleComponentBrandFilterForm{
-		ID: core.ToInt(mux.Vars(r)["id"]),
-	}
 	form := form2.MotorcycleComponentBrandForm{}
 	form.APIParse(r)
 	form.Validate()
 
 	srv := service.NewMotorcycleComponentBrandService()
 	srv.SetEmployeeIdentifier(data.AuthEmployee(r))
-	srv.SetActivityRepository(repository2.NewActivityRepository())
 
-	motorcycleBrand := srv.Update(formFilter, form)
+	motorcycleBrand := srv.Update(core.ToInt(mux.Vars(r)["id"]), form)
 
 	psr := parser.MotorcycleBrandParser{Object: motorcycleBrand}
 	res := xtremeres.Response{Object: psr.First()}
 	res.Success(w)
 
+}
+
+func (ctr MotorcycleComponentBrandHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	srv := service.NewMotorcycleComponentBrandService()
+	srv.SetEmployeeIdentifier(data.AuthEmployee(r))
+
+	srv.Delete(core.ToInt(mux.Vars(r)["id"]))
+	res := xtremeres.Response{}
+	res.Success(w)
 }
