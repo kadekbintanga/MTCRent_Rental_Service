@@ -7,7 +7,7 @@ import (
 )
 
 type RentalFilterForm struct {
-	ID             int
+	ID             uint
 	UUID           string
 	CustomerUUID   string
 	CustomerId     int

@@ -124,7 +124,8 @@ func (repo *motorcycleRepository) Update(motorcycle model.Motorcycle, form form.
 }
 
 func (repo *motorcycleRepository) UpdateStatus(motorcycle model.Motorcycle, form form.MotorcycleStatusUpdateForm) model.Motorcycle {
-	err := repo.Transaction.Model(&motorcycle).Update("statusId", form.StatusId).Error
+	motorcycle.StatusId = form.StatusId
+	err := repo.Transaction.Updates(&motorcycle).Error
 	if err != nil {
 		error2.ErrXtremeMotorcycleUpdate(err.Error())
 	}

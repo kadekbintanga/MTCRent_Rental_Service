@@ -3,12 +3,13 @@ package core
 import (
 	"errors"
 	"fmt"
-	xtremepkg "github.com/globalxtreme/go-core/v2/pkg"
-	xtremeres "github.com/globalxtreme/go-core/v2/response"
 	"net/http"
 	"os"
 	"runtime/debug"
 	"service/internal/pkg/grpc/example"
+
+	xtremepkg "github.com/globalxtreme/go-core/v2/pkg"
+	xtremeres "github.com/globalxtreme/go-core/v2/response"
 )
 
 func ErrorHandler(fn func() error) error {
@@ -161,4 +162,28 @@ func GRPCErrorHandler(fn func() (*example.EXResponse, error)) (res *example.EXRe
 	case err := <-errChan:
 		return nil, err
 	}
+}
+
+func ErrorAsyncHandler(fn func() error) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "panic: %v\n", r)
+			xtremepkg.LogError(r, false)
+
+			switch v := r.(type) {
+			case string:
+				err = fmt.Errorf(v)
+				fmt.Print("Error 1")
+			case error:
+				err = v
+				fmt.Print("Error 2")
+			default:
+				err = fmt.Errorf("unknown panic: %v", v)
+				fmt.Print("Error 3")
+			}
+
+		}
+	}()
+
+	return fn()
 }

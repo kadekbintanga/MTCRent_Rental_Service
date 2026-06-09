@@ -21,3 +21,19 @@ func ErrXtremeRentalDelete(internalMsg string) {
 func ErrXtremeRentalUpdate(internalMsg string) {
 	xtremeres.Error(http.StatusInternalServerError, "Unable to update Rental", internalMsg, false, nil)
 }
+
+func ErrXtremeRentalSimulate(internalMsg string) {
+	xtremeres.Error(http.StatusInternalServerError, "Unable to simulate Rental", internalMsg, false, nil)
+}
+
+func ErrXtremeRentalRefund(internalMsg string) {
+	xtremeres.Error(http.StatusInternalServerError, "Unable to refund Rental", internalMsg, false, nil)
+}
+
+func ErrXtremeRentalReturn(internalMsg string) {
+	xtremeres.Error(http.StatusInternalServerError, "Unable to return Rental", internalMsg, false, nil)
+}
+
+func ErrXtremeRentalInvalidPayload(internalMsg string) {
+	xtremeres.Error(http.StatusBadRequest, "Invalid data request", internalMsg, false, nil)
+}

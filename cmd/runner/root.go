@@ -13,6 +13,7 @@ import (
 
 	"service/internal/app/api"
 	"service/internal/pkg/config"
+	"service/internal/pkg/saga/grpc"
 )
 
 var rootCmd = &cobra.Command{
@@ -21,6 +22,7 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		xtremepkg.InitDevMode()
 		xtremepkg.InitHost()
+		xtremepkg.InitRedisAsyncWorkflowPool()
 
 		config.InitTZ()
 		config.InitCors()
@@ -39,6 +41,15 @@ var rootCmd = &cobra.Command{
 
 		logCleanup := xtremepkg.InitLogRPC()
 		defer logCleanup()
+
+		cleanUp := grpc.InitCustomerClient()
+		defer cleanUp()
+
+		rabbitMQClose := config.InitRabbitMQ()
+		defer rabbitMQClose()
+
+		dialRabbitMQConnClose := config.InitRabbitMQConnection()
+		defer dialRabbitMQConnClose()
 
 		newCors := cors.New(config.CorsOptions)
 

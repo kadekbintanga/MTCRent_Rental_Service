@@ -15,6 +15,7 @@ type CustomerRepository interface {
 	core.FirstRepository[option.CustomerOption, model.Customer]
 
 	Create(opt option.CustomerSaveOption) model.Customer
+	UpdateStatusByID(customerId uint, statusId int)
 }
 
 func NewCustomerRepository(args ...*gorm.DB) CustomerRepository {
@@ -67,6 +68,13 @@ func (repo *customerRepository) Create(opt option.CustomerSaveOption) model.Cust
 	}
 
 	return customer
+}
+
+func (repo *customerRepository) UpdateStatusByID(customerId uint, statusId int) {
+	err := repo.Transaction.Model(&model.Customer{}).Where(`customers."id" = ?`, customerId).Update("statusId", statusId).Error
+	if err != nil {
+		error2.ErrXtremeCustomerUpdate(err.Error())
+	}
 }
 
 func (repo *customerRepository) prepareAndFilter(opt option.CustomerOption) *gorm.DB {

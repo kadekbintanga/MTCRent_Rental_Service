@@ -20,11 +20,17 @@ type CustomerRepository interface {
 	core.FirstRepository[option.CustomerOption, model.Customer]
 
 	Create(opt option.CustomerSaveOption) model.Customer
+	UpdateStatusByID(customerId uint, statusId int)
 }
 
 type MotorcycleRepository interface {
 	core.TransactionInterface
-	core.FindRepository[form.MotorcycleFilterForm, model.Motorcycle]
+	core.FirstRepository[form.MotorcycleFilterForm, model.Motorcycle]
 
 	UpdateStatus(motorcycle model.Motorcycle, form form.MotorcycleStatusUpdateForm) model.Motorcycle
+}
+
+type SettingConfigurationRepository interface {
+	core.TransactionInterface
+	core.FirstRepository[form.SettingConfigurationFilterForm, model.SettingConfiguration]
 }

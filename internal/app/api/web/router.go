@@ -10,7 +10,8 @@ func Register(router *mux.Router) {
 	activityRouter(router)
 	testingRouter(router) // TODO: Hanya contoh. nanti langsung hapus saja
 	motorcycleRouter(router)
-	settingConfigurationRouter(router)
+	settingRouter(router)
+	rentalRouter(router)
 }
 
 func activityRouter(router *mux.Router) {
@@ -42,10 +43,19 @@ func motorcycleRouter(router *mux.Router) {
 	router.HandleFunc("/{uuid}", motorcycleHandler.Update).Methods("PUT")
 }
 
-func settingConfigurationRouter(router *mux.Router) {
-	router = router.PathPrefix("/setting-configurations").Subrouter()
+func settingRouter(router *mux.Router) {
+	router = router.PathPrefix("/settings").Subrouter()
 
 	var settingConfig handler.SettingConfigurationHandler
-	router.HandleFunc("", settingConfig.Get).Methods("GET")
-	router.HandleFunc("/{id}", settingConfig.Update).Methods("PUT")
+	router.HandleFunc("/configurations", settingConfig.Get).Methods("GET")
+	router.HandleFunc("/configurations/{id}", settingConfig.Update).Methods("PUT")
+}
+
+func rentalRouter(router *mux.Router) {
+	var rentalHandler handler.RentalHandler
+	router.HandleFunc("", rentalHandler.Create).Methods("POST")
+	router.HandleFunc("/{uuid}", rentalHandler.Update).Methods("PUT")
+	router.HandleFunc("/{uuid}/simulates", rentalHandler.Simulate).Methods("POST")
+	router.HandleFunc("/{uuid}/refunds", rentalHandler.Refund).Methods("POST")
+	router.HandleFunc("/{uuid}/return", rentalHandler.Return).Methods("POST")
 }

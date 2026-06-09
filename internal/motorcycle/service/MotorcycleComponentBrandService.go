@@ -45,11 +45,7 @@ func (srv *motorcycleComponentBrandService) SetEmployeeIdentifier(employee data.
 }
 
 func (srv *motorcycleComponentBrandService) Create(form form2.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand {
-	motorcycleBrand := srv.prepare(nil)
-
-	if srv.checkNameDuplicate(form.Name) {
-		error2.ErrXtremeMotorcycleBrandUpdate("Motorcycle Brand Name has been registered")
-	}
+	motorcycleBrand := srv.prepareAndValidate(nil, &form, []string{})
 
 	config.PgSQL.Transaction(func(tx *gorm.DB) error {
 		srv.repository.SetTransaction(tx)
@@ -65,13 +61,7 @@ func (srv *motorcycleComponentBrandService) Create(form form2.MotorcycleComponen
 }
 
 func (srv *motorcycleComponentBrandService) Update(id int, form form2.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand {
-	motorcycleBrand := srv.prepare(&id)
-
-	if strings.ToUpper(motorcycleBrand.Name) != strings.ToUpper(form.Name) {
-		if srv.checkNameDuplicate(form.Name) {
-			error2.ErrXtremeMotorcycleBrandUpdate("Motorcycle Brand Name has been registered")
-		}
-	}
+	motorcycleBrand := srv.prepareAndValidate(&id, &form, []string{})
 
 	parser := parser.MotorcycleBrandParser{Object: motorcycleBrand}
 
@@ -90,9 +80,8 @@ func (srv *motorcycleComponentBrandService) Update(id int, form form2.Motorcycle
 }
 
 func (srv *motorcycleComponentBrandService) Delete(id int) {
-	motorcycleBrand := srv.prepare(nil)
+	motorcycleBrand := srv.prepareAndValidate(&id, nil, []string{"Motorcycles"})
 
-	motorcycleBrand = srv.repository.FirstByForm(form2.MotorcycleComponentBrandFilterForm{ID: id, Preloads: []string{"Motorcycles"}})
 	if motorcycleBrand.Default == true {
 		error2.ErrXtremeMotorcycleBrandDelete("Cannot delete default brand", nil)
 	}
@@ -122,21 +111,31 @@ func (srv *motorcycleComponentBrandService) Delete(id int) {
 
 /** --- UNEXPORTED FUNCTIONS --- */
 
-func (srv *motorcycleComponentBrandService) prepare(id *int) model.MotorcycleComponentBrand {
+func (srv *motorcycleComponentBrandService) prepareAndValidate(id *int, form *form2.MotorcycleComponentBrandForm, preloads []string) model.MotorcycleComponentBrand {
 	srv.repository = repository.NewMotorcycleComponentBrandRepository()
 
 	var motorcycleBrand model.MotorcycleComponentBrand
+	needCheckDuplicate := false
+
 	if id != nil {
-		motorcycleBrand = srv.repository.FirstByForm(form2.MotorcycleComponentBrandFilterForm{ID: *id})
+		motorcycleBrand = srv.repository.FirstByForm(
+			form2.MotorcycleComponentBrandFilterForm{ID: *id, Preloads: preloads},
+		)
+
+		if form != nil && !strings.EqualFold(motorcycleBrand.Name, form.Name) {
+			needCheckDuplicate = true
+		}
+	} else {
+		if form != nil {
+			needCheckDuplicate = true
+		}
+	}
+
+	if needCheckDuplicate {
+		if srv.repository.CountByForm(form2.MotorcycleComponentBrandFilterForm{Name: form.Name}) > 0 {
+			error2.ErrXtremeInvalidPayload("Motorcycle Brand Name has been registered")
+		}
 	}
 
 	return motorcycleBrand
-}
-
-func (srv *motorcycleComponentBrandService) checkNameDuplicate(name string) bool {
-	count := srv.repository.CountByForm(form2.MotorcycleComponentBrandFilterForm{Name: name})
-	if count > 0 {
-		return true
-	}
-	return false
 }

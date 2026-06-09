@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"service/internal/pkg/config"
 	"service/internal/pkg/constant"
 	"service/internal/pkg/core"
@@ -17,7 +18,10 @@ type RentalRepository interface {
 	core.FirstRepository[form.RentalFilterForm, model.Rental]
 	core.FindRepository[form.RentalFilterForm, model.Rental]
 
-	Create(form form.RentalForm, opt option.RentalOption) model.Rental
+	Create(opt option.RentalOption) model.Rental
+	CountByForm(form form.RentalFilterForm) int64
+	Update(rental model.Rental, opt option.RentalOption) model.Rental
+	Return(rental model.Rental, form form.RentalReturnForm, opt option.RentalOption) model.Rental
 }
 
 func NewRentalRepository(args ...*gorm.DB) RentalRepository {
@@ -65,14 +69,16 @@ func (repo *rentalRepository) FindByForm(form form.RentalFilterForm) []model.Ren
 	return rental
 }
 
-func (repo *rentalRepository) Create(form form.RentalForm, opt option.RentalOption) model.Rental {
+func (repo *rentalRepository) Create(opt option.RentalOption) model.Rental {
 	rental := model.Rental{
 		CustomerId:            opt.CustomerId,
 		MotorcycleId:          opt.MotorcycleId,
 		MotorcyclePlateNumber: opt.MotorcyclePlateNumber,
 		RentDate:              opt.RentDate,
-		ReturnDatePlan:        core.ToDate(form.ReturnDatePlan),
+		RentDay:               opt.RentDay,
+		ReturnDatePlan:        core.ToDate(opt.ReturnDatePlan),
 		PricePerDay:           opt.PricePerDay,
+		TotalRentPrice:        opt.TotalRentPrice,
 		StatusId:              constant.RENTAL_STATUS_ONGOING_ID,
 	}
 
@@ -83,6 +89,56 @@ func (repo *rentalRepository) Create(form form.RentalForm, opt option.RentalOpti
 
 	return rental
 }
+
+func (repo *rentalRepository) Update(rental model.Rental, opt option.RentalOption) model.Rental {
+	if opt.ReturnDatePlan != "" {
+		rental.ReturnDatePlan = core.ToDate(opt.ReturnDatePlan)
+		rental.RentDay = opt.RentDay
+		rental.TotalRentPrice = opt.TotalRentPrice
+	}
+
+	if opt.ReturnDateActual != "" {
+		rental.ReturnDateActual = core.ToDate(opt.ReturnDateActual)
+		rental.LateDay = opt.LateDay
+		rental.PinaltyPrice = opt.PinaltyPrice
+		rental.StatusId = constant.RENTAL_STATUS_DONE_ID
+	}
+
+	rental.Note = opt.Note
+
+	err := repo.Transaction.Updates(&rental).Error
+	if err != nil {
+		error2.ErrXtremeRentalReturn(err.Error())
+	}
+	return rental
+}
+
+func (repo *rentalRepository) Return(rental model.Rental, form form.RentalReturnForm, opt option.RentalOption) model.Rental {
+	rental.ReturnDateActual = core.ToDate(form.ReturnDateActual)
+	rental.LateDay = opt.LateDay
+	rental.PinaltyPrice = opt.PinaltyPrice
+	rental.StatusId = constant.RENTAL_STATUS_DONE_ID
+	rental.Note = form.Note
+
+	err := repo.Transaction.Updates(&rental).Error
+	if err != nil {
+		error2.ErrXtremeRentalReturn(err.Error())
+	}
+	return rental
+}
+
+func (repo *rentalRepository) CountByForm(form form.RentalFilterForm) int64 {
+	query := repo.prepareAndFilter(form)
+
+	var count int64
+	err := query.Model(&model.Rental{}).Count(&count).Error
+	if err != nil {
+		error2.ErrXtremeRentalGet(err.Error())
+	}
+	return count
+}
+
+/** --- UNEXPORTED FUNCTIONS --- */
 
 func (repo *rentalRepository) prepareAndFilter(form form.RentalFilterForm) *gorm.DB {
 	query := config.PgSQL
@@ -111,6 +167,21 @@ func (repo *rentalRepository) prepareAndFilter(form form.RentalFilterForm) *gorm
 	if form.MotorcycleUUID != "" {
 		query = query.Joins(`JOIN motorcycles ON motorcycles.id = rentals."motorcycleId"`).
 			Where(`motorcycles.uuid = ?`, form.MotorcycleUUID)
+	}
+
+	if len(form.Orders) > 0 {
+		for key, value := range form.Orders {
+
+			query = query.Order(fmt.Sprintf("%s %s", key, value))
+		}
+	} else {
+		query = query.Order("id DESC")
+	}
+
+	if len(form.Preloads) > 0 {
+		for _, preload := range form.Preloads {
+			query = query.Preload(preload)
+		}
 	}
 
 	return query

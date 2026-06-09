@@ -8,24 +8,24 @@ import (
 
 type Rental struct {
 	xtrememodel.BaseModelUUID
-	CustomerId            int       `gorm:"column:customerId;type:int;not null"`
-	MotorcycleId          int       `gorm:"column:motorcycleId;type:int;not null"`
+	CustomerId            uint      `gorm:"column:customerId;type:int;not null"`
+	MotorcycleId          uint      `gorm:"column:motorcycleId;type:int;not null"`
 	MotorcyclePlateNumber string    `gorm:"column:motorcyclePlateNumber;type:varchar(250);not null"`
 	RentDate              time.Time `gorm:"column:rentDate;type:date;not null"`
 	ReturnDatePlan        time.Time `gorm:"column:returnDatePlan;type:date;not null"`
-	ReturnDateActual      time.Time `gorm:"column:returnDateActual;type:date"`
+	ReturnDateActual      time.Time `gorm:"column:returnDateActual;type:date;default:null"`
 	PricePerDay           float64   `gorm:"column:pricePerDay;type:float;not null"`
-	RentDay               int       `gorm:"column:rentDay;type:int"`
+	RentDay               uint      `gorm:"column:rentDay;type:int"`
 	TotalRentPrice        float64   `gorm:"column:totalRentPrice;type:float"`
-	LateDay               int       `gorm:"column:lateDat;type:int"`
+	LateDay               uint      `gorm:"column:lateDay;type:int"`
 	PinaltyPrice          float64   `gorm:"column:pinaltyPrice;type:float"`
 	StatusId              int       `gorm:"column:statusId;type:int;not null"`
-	Note                  string    `gorm:"column:note;type:text"`
+	Note                  string    `gorm:"column:note;type:text;default:null"`
 
-	Customer      Customer      `gorm:"foreignKey:customerId"`
-	Motorcycle    Motorcycle    `gorm:"foreignKey:motorcycleId"`
-	RentalPayment RentalPayment `gorm:"foreignKey:rentalId"`
-	RentalRefund  RentalRefund  `gorm:"foreignKey:rentalId"`
+	Customer       Customer        `gorm:"foreignKey:CustomerId"`
+	Motorcycle     Motorcycle      `gorm:"foreignKey:MotorcycleId"`
+	RentalPayments []RentalPayment `gorm:"foreignKey:RentalId;references:ID"`
+	RentalRefunds  []RentalRefund  `gorm:"foreignKey:RentalId;references:ID"`
 }
 
 func (Rental) TableName() string {

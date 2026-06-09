@@ -59,3 +59,33 @@ func ToDate(text string) time.Time {
 	value, _ := time.Parse("2006-01-02", text)
 	return value
 }
+
+func DaysUntil(startDate time.Time, endDateStr string) (int, error) {
+	loc, err := time.LoadLocation(os.Getenv("TZ"))
+	if err != nil {
+		return 0, err
+	}
+
+	endDate, err := time.ParseInLocation("2006-01-02", endDateStr, loc)
+	if err != nil {
+		return 0, err
+	}
+
+	startDate = time.Date(
+		startDate.Year(),
+		startDate.Month(),
+		startDate.Day(),
+		0, 0, 0, 0,
+		loc,
+	)
+
+	endDate = time.Date(
+		endDate.Year(),
+		endDate.Month(),
+		endDate.Day(),
+		0, 0, 0, 0,
+		loc,
+	)
+
+	return int(endDate.Sub(startDate).Hours() / 24), nil
+}

@@ -1,7 +1,7 @@
 package option
 
 type RentalRefundOption struct {
-	RentalId int
+	RentalId uint
 	Amount   float64
 	MethodId int
 }

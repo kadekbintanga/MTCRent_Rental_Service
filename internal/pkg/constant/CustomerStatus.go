@@ -7,6 +7,8 @@ const CUSTOMER_STATUS_ACTIVE = "Active"
 const CUSTOMER_STATUS_BLACKLISTED_ID = 2
 const CUSTOMER_STATUS_BLACKLISTED = "Blacklisted"
 
+const CUSTOMER_PASS_DAY_LIMIT_REASON = "Customer exceeds the daily limit for return motorcycle"
+
 type CustomerStatus struct{}
 
 func (in CustomerStatus) OptionIDNames() map[int]string {
