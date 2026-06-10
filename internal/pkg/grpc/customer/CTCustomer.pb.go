@@ -65,15 +65,98 @@ func (x *FirstCustomerRequest) GetUuid() string {
 	return ""
 }
 
+type CustomerUpdateStatusRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Uuid            string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	StatusId        int32                  `protobuf:"varint,2,opt,name=statusId,proto3" json:"statusId,omitempty"`
+	BlacklistReason string                 `protobuf:"bytes,3,opt,name=blacklistReason,proto3" json:"blacklistReason,omitempty"`
+	CreatedBy       string                 `protobuf:"bytes,4,opt,name=createdBy,proto3" json:"createdBy,omitempty"`
+	CreatedByName   string                 `protobuf:"bytes,5,opt,name=createdByName,proto3" json:"createdByName,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CustomerUpdateStatusRequest) Reset() {
+	*x = CustomerUpdateStatusRequest{}
+	mi := &file_CTCustomer_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CustomerUpdateStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CustomerUpdateStatusRequest) ProtoMessage() {}
+
+func (x *CustomerUpdateStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_CTCustomer_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CustomerUpdateStatusRequest.ProtoReflect.Descriptor instead.
+func (*CustomerUpdateStatusRequest) Descriptor() ([]byte, []int) {
+	return file_CTCustomer_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CustomerUpdateStatusRequest) GetUuid() string {
+	if x != nil {
+		return x.Uuid
+	}
+	return ""
+}
+
+func (x *CustomerUpdateStatusRequest) GetStatusId() int32 {
+	if x != nil {
+		return x.StatusId
+	}
+	return 0
+}
+
+func (x *CustomerUpdateStatusRequest) GetBlacklistReason() string {
+	if x != nil {
+		return x.BlacklistReason
+	}
+	return ""
+}
+
+func (x *CustomerUpdateStatusRequest) GetCreatedBy() string {
+	if x != nil {
+		return x.CreatedBy
+	}
+	return ""
+}
+
+func (x *CustomerUpdateStatusRequest) GetCreatedByName() string {
+	if x != nil {
+		return x.CreatedByName
+	}
+	return ""
+}
+
 var File_CTCustomer_proto protoreflect.FileDescriptor
 
 const file_CTCustomer_proto_rawDesc = "" +
 	"\n" +
 	"\x10CTCustomer.proto\x12\bcustomer\x1a\x10CTResponse.proto\"*\n" +
 	"\x14FirstCustomerRequest\x12\x12\n" +
-	"\x04uuid\x18\x01 \x01(\tR\x04uuid2X\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\"\xbb\x01\n" +
+	"\x1bCustomerUpdateStatusRequest\x12\x12\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x1a\n" +
+	"\bstatusId\x18\x02 \x01(\x05R\bstatusId\x12(\n" +
+	"\x0fblacklistReason\x18\x03 \x01(\tR\x0fblacklistReason\x12\x1c\n" +
+	"\tcreatedBy\x18\x04 \x01(\tR\tcreatedBy\x12$\n" +
+	"\rcreatedByName\x18\x05 \x01(\tR\rcreatedByName2\xa7\x01\n" +
 	"\x0fCustomerService\x12E\n" +
-	"\vFirstByUUID\x12\x1e.customer.FirstCustomerRequest\x1a\x14.customer.CTResponse\"\x00B\x1cZ\x1ainternal/pkg/grpc/customerb\x06proto3"
+	"\vFirstByUUID\x12\x1e.customer.FirstCustomerRequest\x1a\x14.customer.CTResponse\"\x00\x12M\n" +
+	"\fUpdateStatus\x12%.customer.CustomerUpdateStatusRequest\x1a\x14.customer.CTResponse\"\x00B\x1cZ\x1ainternal/pkg/grpc/customerb\x06proto3"
 
 var (
 	file_CTCustomer_proto_rawDescOnce sync.Once
@@ -87,16 +170,19 @@ func file_CTCustomer_proto_rawDescGZIP() []byte {
 	return file_CTCustomer_proto_rawDescData
 }
 
-var file_CTCustomer_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_CTCustomer_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_CTCustomer_proto_goTypes = []any{
-	(*FirstCustomerRequest)(nil), // 0: customer.FirstCustomerRequest
-	(*CTResponse)(nil),           // 1: customer.CTResponse
+	(*FirstCustomerRequest)(nil),        // 0: customer.FirstCustomerRequest
+	(*CustomerUpdateStatusRequest)(nil), // 1: customer.CustomerUpdateStatusRequest
+	(*CTResponse)(nil),                  // 2: customer.CTResponse
 }
 var file_CTCustomer_proto_depIdxs = []int32{
 	0, // 0: customer.CustomerService.FirstByUUID:input_type -> customer.FirstCustomerRequest
-	1, // 1: customer.CustomerService.FirstByUUID:output_type -> customer.CTResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	1, // 1: customer.CustomerService.UpdateStatus:input_type -> customer.CustomerUpdateStatusRequest
+	2, // 2: customer.CustomerService.FirstByUUID:output_type -> customer.CTResponse
+	2, // 3: customer.CustomerService.UpdateStatus:output_type -> customer.CTResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -114,7 +200,7 @@ func file_CTCustomer_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_CTCustomer_proto_rawDesc), len(file_CTCustomer_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

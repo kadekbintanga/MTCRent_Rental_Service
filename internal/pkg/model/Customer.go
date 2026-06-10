@@ -16,3 +16,7 @@ type Customer struct {
 func (Customer) TableName() string {
 	return "customers"
 }
+
+func (model Customer) SetReference() uint {
+	return model.ID
+}

@@ -10,7 +10,6 @@ import (
 	error2 "service/internal/pkg/error"
 	form2 "service/internal/pkg/form"
 	"service/internal/pkg/form/option"
-	grpcCustomer "service/internal/pkg/grpc/customer"
 	"service/internal/pkg/model"
 	"service/internal/pkg/parser"
 	"service/internal/pkg/port"
@@ -30,6 +29,7 @@ type RentalService interface {
 	SetCustomerRepository(repo port.CustomerRepository)
 	SetMotorcycleRepository(repo port.MotorcycleRepository)
 	SetSettingConfigurationRepository(repo port.SettingConfigurationRepository)
+	SetCustomerService(service port.CustomerService)
 
 	Create(form form2.RentalForm) model.Rental
 	Simulate(uuid string, form form2.RentalSimulateForm) map[string]interface{}
@@ -50,6 +50,7 @@ type rentalService struct {
 	settingConfigRepo port.SettingConfigurationRepository
 	employee          data.EmployeeIdentifierData
 	customerSaga      saga.CustomerSaga
+	customerService   port.CustomerService
 }
 
 func (srv *rentalService) SetTransaction(tx *gorm.DB) {
@@ -70,6 +71,10 @@ func (srv *rentalService) SetMotorcycleRepository(repo port.MotorcycleRepository
 
 func (srv *rentalService) SetSettingConfigurationRepository(repo port.SettingConfigurationRepository) {
 	srv.settingConfigRepo = repo
+}
+
+func (srv *rentalService) SetCustomerService(service port.CustomerService) {
+	srv.customerService = service
 }
 
 func (srv *rentalService) Create(form form2.RentalForm) model.Rental {
@@ -126,7 +131,7 @@ func (srv *rentalService) Create(form form2.RentalForm) model.Rental {
 }
 
 func (srv *rentalService) Simulate(uuid string, form form2.RentalSimulateForm) map[string]interface{} {
-	rental := srv.prepare(&uuid, []string{"RentalPayment", "RentalRefund"})
+	rental := srv.prepare(&uuid, []string{"RentalPayments", "RentalRefunds"})
 	if rental.StatusId != constant.RENTAL_STATUS_ONGOING_ID {
 		error2.ErrXtremeRentalSimulate("Rental status is not ongoing")
 	}
@@ -194,7 +199,7 @@ func (srv *rentalService) Update(uuid string, form form2.RentalUpdateteForm) mod
 }
 
 func (srv *rentalService) Refund(uuid string, form form2.RentalRefundForm) model.RentalRefund {
-	rental := srv.prepare(&uuid, []string{"RentalPayment", "RentalRefund"})
+	rental := srv.prepare(&uuid, []string{"RentalPayments", "RentalRefunds"})
 	if rental.StatusId != constant.RENTAL_STATUS_ONGOING_ID {
 		error2.ErrXtremeRentalSimulate("Rental status is not ongoing")
 	}
@@ -273,8 +278,8 @@ func (srv *rentalService) Return(uuid string, form form2.RentalReturnForm) model
 		}
 
 		rental.Motorcycle = motorcycle
-
-		// TODO : update status custome in DB and Service Customer via GRPC
+		srv.customerService.SetTransaction(tx)
+		srv.processBlacklist(rental.Customer, lateDay)
 
 		parser := parser.RentalParser{Object: rental}
 		activity.UseActivity{Employee: srv.employee}.SetReference(&rental).SetParser(&parser).SetNewProperty(constant.ACTION_CREATE).
@@ -282,7 +287,6 @@ func (srv *rentalService) Return(uuid string, form form2.RentalReturnForm) model
 
 		return nil
 	})
-	// srv.processBlacklist(rental.CustomerId, lateDay)
 	return rental
 }
 
@@ -302,42 +306,8 @@ func (srv *rentalService) prepare(uuid *string, preloads []string) model.Rental 
 func (srv *rentalService) checkCustomer(customerUUID string) model.Customer {
 	customer := srv.customerRepo.FirstByForm(option.CustomerOption{UUID: customerUUID})
 	if customer.ID == 0 {
-		customerPayload := grpcCustomer.FirstCustomerRequest{
-			Uuid: customerUUID,
-		}
-		srv.customerSaga = saga.NewCustomerSaga()
-		customerSaga := srv.customerSaga.FirstCustomerByUUID(&customerPayload)
-		status := customerSaga["status"].(map[string]interface{})
-		statusID, ok := status["id"].(float64)
-		if !ok {
-			error2.ErrXtremeRentalSave("Invalid customer status")
-		}
+		customer = srv.customerService.Save(customerUUID)
 
-		if int(statusID) == constant.CUSTOMER_STATUS_BLACKLISTED_ID {
-			error2.ErrXtremeRentalSave("Customer was blacklisted")
-		}
-
-		customerID, ok := customerSaga["id"].(float64)
-		if !ok {
-			error2.ErrXtremeRentalSave("Invalid customer ID")
-		}
-
-		config.PgSQL.Transaction(func(tx *gorm.DB) error {
-			srv.customerRepo.SetTransaction(tx)
-			customer = srv.customerRepo.Create(
-				option.CustomerSaveOption{
-					ID:        int(customerID),
-					UUID:      customerSaga["uuid"].(string),
-					Name:      customerSaga["name"].(string),
-					IDNumber:  customerSaga["IDNumber"].(string),
-					SIMNumber: customerSaga["SIMNumber"].(string),
-					Phone:     customerSaga["phone"].(string),
-					StatusId:  int(statusID),
-				},
-			)
-
-			return nil
-		})
 	} else {
 		if customer.StatusId == constant.CUSTOMER_STATUS_BLACKLISTED_ID {
 			error2.ErrXtremeRentalSave("Customer was blacklisted")
@@ -405,21 +375,12 @@ func (srv *rentalService) calculateTotalPrice(rental model.Rental, returnDate st
 
 }
 
-func (srv *rentalService) processBlacklist(customerId uint, lateDay int) {
+func (srv *rentalService) processBlacklist(customer model.Customer, lateDay int) {
 	blacklistLimitDay := srv.settingConfigRepo.FirstByForm(form2.SettingConfigurationFilterForm{Key: constant.SETTING_CONFIGURATION_KEY_BLACKLIST_LIMIT_DAY})
-	fmt.Println(blacklistLimitDay)
 	limitDay := core.ToInt(blacklistLimitDay.Value)
 	if lateDay > limitDay {
-		config.PgSQL.Transaction(func(tx *gorm.DB) error {
-			srv.customerRepo.SetTransaction(tx)
-			srv.customerRepo.UpdateStatusByID(customerId, constant.CUSTOMER_STATUS_BLACKLISTED_ID)
-			return nil
-		})
-		customer := srv.customerRepo.FirstByForm(option.CustomerOption{ID: int(customerId)})
-		srv.sendBlacklistCustomer(customer)
-
+		srv.customerService.BlacklistCustomer(customer, constant.CUSTOMER_PASS_DAY_LIMIT_REASON)
 	}
-
 }
 
 func (srv *rentalService) sendBlacklistCustomer(customer model.Customer) {

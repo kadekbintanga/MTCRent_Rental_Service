@@ -16,23 +16,24 @@ type CustomerRepository interface {
 
 	Create(opt option.CustomerSaveOption) model.Customer
 	UpdateStatusByID(customerId uint, statusId int)
+	UpdateStatus(customer model.Customer, opt option.CustomerSaveOption) model.Customer
 }
 
 func NewCustomerRepository(args ...*gorm.DB) CustomerRepository {
 	repository := customerRepository{}
 	if len(args) > 0 {
-		repository.Transaction = args[0]
+		repository.tx = args[0]
 	}
 
 	return &repository
 }
 
 type customerRepository struct {
-	Transaction *gorm.DB
+	tx *gorm.DB
 }
 
 func (repo *customerRepository) SetTransaction(tx *gorm.DB) {
-	repo.Transaction = tx
+	repo.tx = tx
 }
 
 func (repo *customerRepository) FirstByForm(opt option.CustomerOption, args ...func(query *gorm.DB) *gorm.DB) model.Customer {
@@ -62,7 +63,7 @@ func (repo *customerRepository) Create(opt option.CustomerSaveOption) model.Cust
 		StatusId:  opt.StatusId,
 	}
 
-	err := repo.Transaction.Create(&customer).Error
+	err := repo.tx.Create(&customer).Error
 	if err != nil {
 		error2.ErrXtremeCustomerSave(err.Error())
 	}
@@ -70,8 +71,18 @@ func (repo *customerRepository) Create(opt option.CustomerSaveOption) model.Cust
 	return customer
 }
 
+func (repo *customerRepository) UpdateStatus(customer model.Customer, opt option.CustomerSaveOption) model.Customer {
+	customer.StatusId = opt.StatusId
+	err := repo.tx.Updates(&customer).Error
+	if err != nil {
+		error2.ErrXtremeCustomerUpdate(err.Error())
+	}
+
+	return customer
+}
+
 func (repo *customerRepository) UpdateStatusByID(customerId uint, statusId int) {
-	err := repo.Transaction.Model(&model.Customer{}).Where(`customers."id" = ?`, customerId).Update("statusId", statusId).Error
+	err := repo.tx.Model(&model.Customer{}).Where(`customers."id" = ?`, customerId).Update("statusId", statusId).Error
 	if err != nil {
 		error2.ErrXtremeCustomerUpdate(err.Error())
 	}

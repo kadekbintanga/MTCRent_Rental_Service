@@ -5,6 +5,8 @@ const ACTION_UPDATE = "update"
 const ACTION_DELETE = "delete"
 const ACTION_GENERAL = "general"
 
+const ACTIVITY_CUSTOMER_STATUS = "status"
+
 type ActivityAction struct{}
 
 func (srv ActivityAction) OptionCodeNames() []string {

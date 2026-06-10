@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CustomerService_FirstByUUID_FullMethodName = "/customer.CustomerService/FirstByUUID"
+	CustomerService_FirstByUUID_FullMethodName  = "/customer.CustomerService/FirstByUUID"
+	CustomerService_UpdateStatus_FullMethodName = "/customer.CustomerService/UpdateStatus"
 )
 
 // CustomerServiceClient is the client API for CustomerService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CustomerServiceClient interface {
 	FirstByUUID(ctx context.Context, in *FirstCustomerRequest, opts ...grpc.CallOption) (*CTResponse, error)
+	UpdateStatus(ctx context.Context, in *CustomerUpdateStatusRequest, opts ...grpc.CallOption) (*CTResponse, error)
 }
 
 type customerServiceClient struct {
@@ -47,11 +49,22 @@ func (c *customerServiceClient) FirstByUUID(ctx context.Context, in *FirstCustom
 	return out, nil
 }
 
+func (c *customerServiceClient) UpdateStatus(ctx context.Context, in *CustomerUpdateStatusRequest, opts ...grpc.CallOption) (*CTResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CTResponse)
+	err := c.cc.Invoke(ctx, CustomerService_UpdateStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CustomerServiceServer is the server API for CustomerService service.
 // All implementations must embed UnimplementedCustomerServiceServer
 // for forward compatibility.
 type CustomerServiceServer interface {
 	FirstByUUID(context.Context, *FirstCustomerRequest) (*CTResponse, error)
+	UpdateStatus(context.Context, *CustomerUpdateStatusRequest) (*CTResponse, error)
 	mustEmbedUnimplementedCustomerServiceServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedCustomerServiceServer struct{}
 
 func (UnimplementedCustomerServiceServer) FirstByUUID(context.Context, *FirstCustomerRequest) (*CTResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FirstByUUID not implemented")
+}
+func (UnimplementedCustomerServiceServer) UpdateStatus(context.Context, *CustomerUpdateStatusRequest) (*CTResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateStatus not implemented")
 }
 func (UnimplementedCustomerServiceServer) mustEmbedUnimplementedCustomerServiceServer() {}
 func (UnimplementedCustomerServiceServer) testEmbeddedByValue()                         {}
@@ -104,6 +120,24 @@ func _CustomerService_FirstByUUID_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CustomerService_UpdateStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CustomerUpdateStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CustomerServiceServer).UpdateStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CustomerService_UpdateStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CustomerServiceServer).UpdateStatus(ctx, req.(*CustomerUpdateStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CustomerService_ServiceDesc is the grpc.ServiceDesc for CustomerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +148,10 @@ var CustomerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FirstByUUID",
 			Handler:    _CustomerService_FirstByUUID_Handler,
+		},
+		{
+			MethodName: "UpdateStatus",
+			Handler:    _CustomerService_UpdateStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

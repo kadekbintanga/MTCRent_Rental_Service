@@ -4,6 +4,7 @@ import (
 	"net/http"
 	motorcycleRepo "service/internal/motorcycle/repository"
 	otherRepo "service/internal/other/repository"
+	otherService "service/internal/other/service"
 	form2 "service/internal/pkg/form"
 	"service/internal/pkg/parser"
 	"service/internal/rental/service"
@@ -25,6 +26,7 @@ func (ctr RentalHandler) Create(w http.ResponseWriter, r *http.Request) {
 	srv.SetEmployeeIdentifier(data.AuthEmployee(r))
 	srv.SetCustomerRepository(otherRepo.NewCustomerRepository())
 	srv.SetMotorcycleRepository(motorcycleRepo.NewMotorcycleRepository())
+	srv.SetCustomerService(otherService.NewCustomerService())
 
 	rental := srv.Create(form)
 
@@ -81,6 +83,7 @@ func (ctr RentalHandler) Return(w http.ResponseWriter, r *http.Request) {
 	srv.SetCustomerRepository(otherRepo.NewCustomerRepository())
 	srv.SetSettingConfigurationRepository(settingConfigRepo.NewSettingConfigurationRepository())
 	srv.SetMotorcycleRepository(motorcycleRepo.NewMotorcycleRepository())
+	srv.SetCustomerService(otherService.NewCustomerService())
 
 	rental := srv.Return(mux.Vars(r)["uuid"], form)
 	psr := parser.RentalParser{Object: rental}

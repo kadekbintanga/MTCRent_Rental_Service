@@ -11,9 +11,18 @@ import "CTResponse.proto";
 
 service CustomerService {
     rpc FirstByUUID(FirstCustomerRequest) returns (CTResponse) {}
+    rpc UpdateStatus(CustomerUpdateStatusRequest) returns (CTResponse) {}
 }
 
 
 message FirstCustomerRequest {
     string uuid = 1;
+}
+
+message CustomerUpdateStatusRequest {
+    string uuid = 1;
+    int32 statusId = 2;
+    string blacklistReason = 3; 
+    string createdBy = 4; 
+    string createdByName = 5; 
 }
