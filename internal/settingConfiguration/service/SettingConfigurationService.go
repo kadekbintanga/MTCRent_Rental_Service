@@ -43,6 +43,7 @@ func (srv *settingConfigurationService) SetEmployeeIdentifier(employee data.Empl
 
 func (srv *settingConfigurationService) Update(filterForm form2.SettingConfigurationFilterForm, form form.SettingConfigurationForm) model.SettingConfiguration {
 	srv.repository = repository.NewSettingConfigurationRepository()
+	srv.repository.SetEmployeeIdentifier(srv.employee)
 	settingConfig := srv.repository.FirstByForm(filterForm)
 
 	parser := parser.SettingConfigurationParser{Object: settingConfig}

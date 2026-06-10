@@ -113,6 +113,7 @@ func (srv *motorcycleComponentBrandService) Delete(id int) {
 
 func (srv *motorcycleComponentBrandService) prepareAndValidate(id *int, form *form2.MotorcycleComponentBrandForm, preloads []string) model.MotorcycleComponentBrand {
 	srv.repository = repository.NewMotorcycleComponentBrandRepository()
+	srv.repository.SetEmployeeIdentifier(srv.employee)
 
 	var motorcycleBrand model.MotorcycleComponentBrand
 	needCheckDuplicate := false

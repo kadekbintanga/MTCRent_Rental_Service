@@ -290,6 +290,7 @@ func (srv *rentalService) Return(uuid string, form form2.RentalReturnForm) model
 
 func (srv *rentalService) prepare(uuid *string, preloads []string) model.Rental {
 	srv.repository = repository.NewRentalRepository()
+	srv.repository.SetEmployeeIdentifier(srv.employee)
 
 	var rental model.Rental
 	if uuid != nil {

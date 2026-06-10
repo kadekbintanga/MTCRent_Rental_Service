@@ -44,12 +44,13 @@ func (srv *motorcycleService) SetEmployeeIdentifier(employee data.EmployeeIdenti
 }
 
 func (srv *motorcycleService) Create(form form2.MotorcycleForm) model.Motorcycle {
-	motorcycle, _ := srv.prepareAndValidate(nil, &form)
+	motorcycle, brand := srv.prepareAndValidate(nil, &form)
 
 	config.PgSQL.Transaction(func(tx *gorm.DB) error {
 		srv.repository.SetTransaction(tx)
 
 		motorcycle = srv.repository.Create(form)
+		motorcycle.Brand = brand
 
 		parser := parser.MotorcycleParser{Object: motorcycle}
 		activity.UseActivity{Employee: srv.employee}.SetReference(&motorcycle).SetParser(&parser).SetNewProperty(constant.ACTION_CREATE).
@@ -82,6 +83,7 @@ func (srv *motorcycleService) Update(uuid string, form form2.MotorcycleForm) mod
 /** --- UNEXPORTED FUNCTIONS --- */
 func (srv *motorcycleService) prepareAndValidate(uuid *string, form *form2.MotorcycleForm) (model.Motorcycle, model.MotorcycleComponentBrand) {
 	srv.repository = repository.NewMotorcycleRepository()
+	srv.repository.SetEmployeeIdentifier(srv.employee)
 
 	var motorcycle model.Motorcycle
 	var motorcycleBrand model.MotorcycleComponentBrand
