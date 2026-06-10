@@ -10,11 +10,13 @@ import (
 	"service/internal/pkg/form/option"
 	"service/internal/pkg/model"
 
+	"github.com/globalxtreme/go-identifier/data"
 	"gorm.io/gorm"
 )
 
 type RentalRepository interface {
 	core.TransactionInterface
+	core.EmployeeIdentifierInterface
 	core.FirstRepository[form.RentalFilterForm, model.Rental]
 	core.FindRepository[form.RentalFilterForm, model.Rental]
 
@@ -27,18 +29,23 @@ type RentalRepository interface {
 func NewRentalRepository(args ...*gorm.DB) RentalRepository {
 	repository := rentalRepository{}
 	if len(args) > 0 {
-		repository.Transaction = args[0]
+		repository.tx = args[0]
 	}
 
 	return &repository
 }
 
 type rentalRepository struct {
-	Transaction *gorm.DB
+	tx       *gorm.DB
+	employee data.EmployeeIdentifierData
 }
 
 func (repo *rentalRepository) SetTransaction(tx *gorm.DB) {
-	repo.Transaction = tx
+	repo.tx = tx
+}
+
+func (repo *rentalRepository) SetEmployeeIdentifier(emplyee data.EmployeeIdentifierData) {
+	repo.employee = emplyee
 }
 
 func (repo *rentalRepository) FirstByForm(form form.RentalFilterForm, args ...func(query *gorm.DB) *gorm.DB) model.Rental {
@@ -82,7 +89,14 @@ func (repo *rentalRepository) Create(opt option.RentalOption) model.Rental {
 		StatusId:              constant.RENTAL_STATUS_ONGOING_ID,
 	}
 
-	err := repo.Transaction.Create(&rental).Error
+	if repo.employee.ID != "" {
+		rental.CreatedBy = &repo.employee.ID
+		rental.CreatedByName = &repo.employee.FullName
+		rental.UpdatedBy = &repo.employee.ID
+		rental.UpdatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Create(&rental).Error
 	if err != nil {
 		error2.ErrXtremeRentalSave(err.Error())
 	}
@@ -106,7 +120,12 @@ func (repo *rentalRepository) Update(rental model.Rental, opt option.RentalOptio
 
 	rental.Note = opt.Note
 
-	err := repo.Transaction.Updates(&rental).Error
+	if repo.employee.ID != "" {
+		rental.UpdatedBy = &repo.employee.ID
+		rental.UpdatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Updates(&rental).Error
 	if err != nil {
 		error2.ErrXtremeRentalReturn(err.Error())
 	}
@@ -120,7 +139,12 @@ func (repo *rentalRepository) Return(rental model.Rental, form form.RentalReturn
 	rental.StatusId = constant.RENTAL_STATUS_DONE_ID
 	rental.Note = form.Note
 
-	err := repo.Transaction.Updates(&rental).Error
+	if repo.employee.ID != "" {
+		rental.UpdatedBy = &repo.employee.ID
+		rental.UpdatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Updates(&rental).Error
 	if err != nil {
 		error2.ErrXtremeRentalReturn(err.Error())
 	}

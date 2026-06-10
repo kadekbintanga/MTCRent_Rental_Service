@@ -6,11 +6,13 @@ import (
 	"service/internal/pkg/form/option"
 	"service/internal/pkg/model"
 
+	"github.com/globalxtreme/go-identifier/data"
 	"gorm.io/gorm"
 )
 
 type RentalRefundRepository interface {
 	core.TransactionInterface
+	core.EmployeeIdentifierInterface
 
 	Create(opt option.RentalRefundOption) model.RentalRefund
 }
@@ -18,18 +20,23 @@ type RentalRefundRepository interface {
 func NewRentalRefundRepository(args ...*gorm.DB) RentalRefundRepository {
 	repository := rentalRefundRepository{}
 	if len(args) > 0 {
-		repository.Transaction = args[0]
+		repository.tx = args[0]
 	}
 
 	return &repository
 }
 
 type rentalRefundRepository struct {
-	Transaction *gorm.DB
+	tx       *gorm.DB
+	employee data.EmployeeIdentifierData
 }
 
 func (repo *rentalRefundRepository) SetTransaction(tx *gorm.DB) {
-	repo.Transaction = tx
+	repo.tx = tx
+}
+
+func (repo *rentalRefundRepository) SetEmployeeIdentifier(emplyee data.EmployeeIdentifierData) {
+	repo.employee = emplyee
 }
 
 func (repo *rentalRefundRepository) Create(opt option.RentalRefundOption) model.RentalRefund {
@@ -39,7 +46,12 @@ func (repo *rentalRefundRepository) Create(opt option.RentalRefundOption) model.
 		MethodId: opt.MethodId,
 	}
 
-	err := repo.Transaction.Create(&rentalRefund).Error
+	if repo.employee.ID != "" {
+		rentalRefund.CreatedBy = &repo.employee.ID
+		rentalRefund.CreatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Create(&rentalRefund).Error
 	if err != nil {
 		error2.ErrXtremeRentalRefundSave(err.Error())
 	}

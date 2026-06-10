@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	xtrememodel "github.com/globalxtreme/go-core/v2/model"
+	"github.com/globalxtreme/go-identifier/data"
 	"gorm.io/gorm"
 
 	"service/internal/pkg/config"
@@ -18,6 +19,7 @@ import (
 
 type MotorcycleComponentBrandRepository interface {
 	core.TransactionInterface
+	core.EmployeeIdentifierInterface
 	core.FirstRepository[form.MotorcycleComponentBrandFilterForm, model.MotorcycleComponentBrand]
 	core.FindRepository[form.MotorcycleComponentBrandFilterForm, model.MotorcycleComponentBrand]
 	core.PaginateRepository[form.MotorcycleComponentBrandFilterForm, model.MotorcycleComponentBrand]
@@ -31,18 +33,23 @@ type MotorcycleComponentBrandRepository interface {
 func NewMotorcycleComponentBrandRepository(args ...*gorm.DB) MotorcycleComponentBrandRepository {
 	repository := motorcycleComponentBrandRepository{}
 	if len(args) > 0 {
-		repository.Transaction = args[0]
+		repository.tx = args[0]
 	}
 
 	return &repository
 }
 
 type motorcycleComponentBrandRepository struct {
-	Transaction *gorm.DB
+	tx       *gorm.DB
+	employee data.EmployeeIdentifierData
 }
 
 func (repo *motorcycleComponentBrandRepository) SetTransaction(tx *gorm.DB) {
-	repo.Transaction = tx
+	repo.tx = tx
+}
+
+func (repo *motorcycleComponentBrandRepository) SetEmployeeIdentifier(emplyee data.EmployeeIdentifierData) {
+	repo.employee = emplyee
 }
 
 func (repo *motorcycleComponentBrandRepository) FirstByForm(form form.MotorcycleComponentBrandFilterForm, args ...func(query *gorm.DB) *gorm.DB) model.MotorcycleComponentBrand {
@@ -93,7 +100,14 @@ func (repo *motorcycleComponentBrandRepository) Create(form form.MotorcycleCompo
 		Default: false,
 	}
 
-	err := repo.Transaction.Create(&motorcycleBrand).Error
+	if repo.employee.ID != "" {
+		motorcycleBrand.CreatedBy = &repo.employee.ID
+		motorcycleBrand.CreatedByName = &repo.employee.FullName
+		motorcycleBrand.UpdatedBy = &repo.employee.ID
+		motorcycleBrand.UpdatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Create(&motorcycleBrand).Error
 	if err != nil {
 		error2.ErrXtremeMotorcycleBrandSave(err.Error())
 	}
@@ -104,7 +118,12 @@ func (repo *motorcycleComponentBrandRepository) Create(form form.MotorcycleCompo
 func (repo *motorcycleComponentBrandRepository) Update(brand model.MotorcycleComponentBrand, form form.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand {
 	brand.Name = strings.ToUpper(form.Name)
 
-	err := repo.Transaction.Updates(&brand).Error
+	if repo.employee.ID != "" {
+		brand.UpdatedBy = &repo.employee.ID
+		brand.UpdatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Updates(&brand).Error
 	if err != nil {
 		error2.ErrXtremeMotorcycleBrandUpdate(err.Error())
 	}
@@ -112,7 +131,12 @@ func (repo *motorcycleComponentBrandRepository) Update(brand model.MotorcycleCom
 }
 
 func (repo *motorcycleComponentBrandRepository) Delete(brand model.MotorcycleComponentBrand) {
-	err := repo.Transaction.Delete(&brand).Error
+	if repo.employee.ID != "" {
+		brand.UpdatedBy = &repo.employee.ID
+		brand.UpdatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Delete(&brand).Error
 	if err != nil {
 		error2.ErrXtremeMotorcycleBrandDelete(err.Error(), nil)
 	}

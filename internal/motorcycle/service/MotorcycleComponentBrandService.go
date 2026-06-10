@@ -118,9 +118,7 @@ func (srv *motorcycleComponentBrandService) prepareAndValidate(id *int, form *fo
 	needCheckDuplicate := false
 
 	if id != nil {
-		motorcycleBrand = srv.repository.FirstByForm(
-			form2.MotorcycleComponentBrandFilterForm{ID: *id, Preloads: preloads},
-		)
+		motorcycleBrand = srv.repository.FirstByForm(form2.MotorcycleComponentBrandFilterForm{ID: *id, Preloads: preloads})
 
 		if form != nil && !strings.EqualFold(motorcycleBrand.Name, form.Name) {
 			needCheckDuplicate = true

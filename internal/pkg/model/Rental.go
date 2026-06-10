@@ -21,6 +21,10 @@ type Rental struct {
 	PinaltyPrice          float64   `gorm:"column:pinaltyPrice;type:float"`
 	StatusId              int       `gorm:"column:statusId;type:int;not null"`
 	Note                  string    `gorm:"column:note;type:text;default:null"`
+	CreatedBy             *string   `gorm:"column:createdBy;varchar(50);null"`
+	CreatedByName         *string   `gorm:"column:createdByName;varchar(250);null"`
+	UpdatedBy             *string   `gorm:"column:updatedBy;varchar(50);null"`
+	UpdatedByName         *string   `gorm:"column:updatedByName;varchar(250);null"`
 
 	Customer       Customer        `gorm:"foreignKey:CustomerId"`
 	Motorcycle     Motorcycle      `gorm:"foreignKey:MotorcycleId"`

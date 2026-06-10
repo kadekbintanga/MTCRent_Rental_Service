@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	xtrememodel "github.com/globalxtreme/go-core/v2/model"
+	"github.com/globalxtreme/go-identifier/data"
 	"gorm.io/gorm"
 
 	"service/internal/pkg/config"
@@ -18,6 +19,7 @@ import (
 
 type MotorcycleRepository interface {
 	core.TransactionInterface
+	core.EmployeeIdentifierInterface
 	core.FirstRepository[form.MotorcycleFilterForm, model.Motorcycle]
 	core.FindRepository[form.MotorcycleFilterForm, model.Motorcycle]
 	core.PaginateRepository[form.MotorcycleFilterForm, model.Motorcycle]
@@ -32,18 +34,23 @@ type MotorcycleRepository interface {
 func NewMotorcycleRepository(args ...*gorm.DB) MotorcycleRepository {
 	repository := motorcycleRepository{}
 	if len(args) > 0 {
-		repository.Transaction = args[0]
+		repository.tx = args[0]
 	}
 
 	return &repository
 }
 
 type motorcycleRepository struct {
-	Transaction *gorm.DB
+	tx       *gorm.DB
+	employee data.EmployeeIdentifierData
 }
 
 func (repo *motorcycleRepository) SetTransaction(tx *gorm.DB) {
-	repo.Transaction = tx
+	repo.tx = tx
+}
+
+func (repo *motorcycleRepository) SetEmployeeIdentifier(emplyee data.EmployeeIdentifierData) {
+	repo.employee = emplyee
 }
 
 func (repo *motorcycleRepository) FirstByForm(form form.MotorcycleFilterForm, args ...func(query *gorm.DB) *gorm.DB) model.Motorcycle {
@@ -99,7 +106,14 @@ func (repo *motorcycleRepository) Create(form form.MotorcycleForm) model.Motorcy
 		BrandId:     form.BrandId,
 	}
 
-	err := repo.Transaction.Create(&motorcycle).Error
+	if repo.employee.ID != "" {
+		motorcycle.CreatedBy = &repo.employee.ID
+		motorcycle.CreatedByName = &repo.employee.FullName
+		motorcycle.UpdatedBy = &repo.employee.ID
+		motorcycle.UpdatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Create(&motorcycle).Error
 	if err != nil {
 		error2.ErrXtremeMotorcycleSave(err.Error())
 	}
@@ -116,7 +130,12 @@ func (repo *motorcycleRepository) Update(motorcycle model.Motorcycle, form form.
 	motorcycle.StatusId = form.StatusId
 	motorcycle.BrandId = form.BrandId
 
-	err := repo.Transaction.Updates(&motorcycle).Error
+	if repo.employee.ID != "" {
+		motorcycle.UpdatedBy = &repo.employee.ID
+		motorcycle.UpdatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Updates(&motorcycle).Error
 	if err != nil {
 		error2.ErrXtremeMotorcycleUpdate(err.Error())
 	}
@@ -125,7 +144,13 @@ func (repo *motorcycleRepository) Update(motorcycle model.Motorcycle, form form.
 
 func (repo *motorcycleRepository) UpdateStatus(motorcycle model.Motorcycle, form form.MotorcycleStatusUpdateForm) model.Motorcycle {
 	motorcycle.StatusId = form.StatusId
-	err := repo.Transaction.Updates(&motorcycle).Error
+
+	if repo.employee.ID != "" {
+		motorcycle.UpdatedBy = &repo.employee.ID
+		motorcycle.UpdatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Updates(&motorcycle).Error
 	if err != nil {
 		error2.ErrXtremeMotorcycleUpdate(err.Error())
 	}
@@ -134,7 +159,12 @@ func (repo *motorcycleRepository) UpdateStatus(motorcycle model.Motorcycle, form
 }
 
 func (repo *motorcycleRepository) Delete(motorcycle model.Motorcycle) {
-	err := repo.Transaction.Delete(&motorcycle).Error
+	if repo.employee.ID != "" {
+		motorcycle.UpdatedBy = &repo.employee.ID
+		motorcycle.UpdatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Delete(&motorcycle).Error
 	if err != nil {
 		error2.ErrXtremeMotorcycleDelete(err.Error())
 	}

@@ -6,11 +6,13 @@ import (
 	"service/internal/pkg/form/option"
 	"service/internal/pkg/model"
 
+	"github.com/globalxtreme/go-identifier/data"
 	"gorm.io/gorm"
 )
 
 type RentalPaymentRepository interface {
 	core.TransactionInterface
+	core.EmployeeIdentifierInterface
 
 	Create(opt option.RentalPaymentOption) model.RentalPayment
 }
@@ -18,18 +20,23 @@ type RentalPaymentRepository interface {
 func NewRentalPaymentRepository(args ...*gorm.DB) RentalPaymentRepository {
 	repository := rentalPaymentRepository{}
 	if len(args) > 0 {
-		repository.Transaction = args[0]
+		repository.tx = args[0]
 	}
 
 	return &repository
 }
 
 type rentalPaymentRepository struct {
-	Transaction *gorm.DB
+	tx       *gorm.DB
+	employee data.EmployeeIdentifierData
 }
 
 func (repo *rentalPaymentRepository) SetTransaction(tx *gorm.DB) {
-	repo.Transaction = tx
+	repo.tx = tx
+}
+
+func (repo *rentalPaymentRepository) SetEmployeeIdentifier(emplyee data.EmployeeIdentifierData) {
+	repo.employee = emplyee
 }
 
 func (repo *rentalPaymentRepository) Create(opt option.RentalPaymentOption) model.RentalPayment {
@@ -39,7 +46,12 @@ func (repo *rentalPaymentRepository) Create(opt option.RentalPaymentOption) mode
 		MethodId: opt.MethodId,
 	}
 
-	err := repo.Transaction.Create(&rentalPayment).Error
+	if repo.employee.ID != "" {
+		rentalPayment.CreatedBy = &repo.employee.ID
+		rentalPayment.CreatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Create(&rentalPayment).Error
 	if err != nil {
 		error2.ErrXtremeRentalPaymentSave(err.Error())
 	}

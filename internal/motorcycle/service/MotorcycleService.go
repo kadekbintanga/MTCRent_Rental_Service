@@ -44,13 +44,7 @@ func (srv *motorcycleService) SetEmployeeIdentifier(employee data.EmployeeIdenti
 }
 
 func (srv *motorcycleService) Create(form form2.MotorcycleForm) model.Motorcycle {
-	motorcycle := srv.prepare(nil)
-	if srv.checkPlateNumberDuplicate(form.PlateNumber) {
-		error2.ErrXtremeMotorcycleSave("Plate Number has been registered")
-	}
-	if !srv.checkBrandExist(form.BrandId) {
-		error2.ErrXtremeMotorcycleSave("Invalid Motorcycle Brand")
-	}
+	motorcycle, _ := srv.prepareAndValidate(nil, &form)
 
 	config.PgSQL.Transaction(func(tx *gorm.DB) error {
 		srv.repository.SetTransaction(tx)
@@ -66,19 +60,7 @@ func (srv *motorcycleService) Create(form form2.MotorcycleForm) model.Motorcycle
 }
 
 func (srv *motorcycleService) Update(uuid string, form form2.MotorcycleForm) model.Motorcycle {
-	motorcycle := srv.prepare(&uuid)
-
-	if strings.ToUpper(motorcycle.PlateNumber) != strings.ToUpper(form.PlateNumber) {
-		if srv.checkPlateNumberDuplicate(form.PlateNumber) {
-			error2.ErrXtremeMotorcycleSave("Plate Number has been registered")
-		}
-	}
-
-	if motorcycle.BrandId != form.BrandId {
-		if !srv.checkBrandExist(form.BrandId) {
-			error2.ErrXtremeMotorcycleSave("Invalid Motorcycle Brand")
-		}
-	}
+	motorcycle, brand := srv.prepareAndValidate(&uuid, &form)
 
 	parser := parser.MotorcycleParser{Object: motorcycle}
 
@@ -87,6 +69,7 @@ func (srv *motorcycleService) Update(uuid string, form form2.MotorcycleForm) mod
 		useActivity := activity.UseActivity{Employee: srv.employee}.SetReference(&motorcycle).SetParser(&parser).SetOldProperty(constant.ACTION_UPDATE)
 
 		motorcycle = srv.repository.Update(motorcycle, form)
+		motorcycle.Brand = brand
 
 		parser.Object = motorcycle
 		useActivity.SetReference(&motorcycle).SetParser(&parser).SetNewProperty(constant.ACTION_UPDATE).
@@ -97,31 +80,42 @@ func (srv *motorcycleService) Update(uuid string, form form2.MotorcycleForm) mod
 }
 
 /** --- UNEXPORTED FUNCTIONS --- */
-func (srv *motorcycleService) prepare(uuid *string) model.Motorcycle {
+func (srv *motorcycleService) prepareAndValidate(uuid *string, form *form2.MotorcycleForm) (model.Motorcycle, model.MotorcycleComponentBrand) {
 	srv.repository = repository.NewMotorcycleRepository()
 
 	var motorcycle model.Motorcycle
+	var motorcycleBrand model.MotorcycleComponentBrand
+	needCheckPlateNumber := false
+	needCheckBrand := false
+
 	if uuid != nil {
 		motorcycle = srv.repository.FirstByForm(form2.MotorcycleFilterForm{UUID: *uuid})
+		if form != nil {
+			if !strings.EqualFold(motorcycle.PlateNumber, form.PlateNumber) {
+				needCheckPlateNumber = true
+			}
+			if motorcycle.BrandId != form.BrandId {
+				needCheckBrand = true
+			}
+		}
+	} else {
+		if form != nil {
+			needCheckPlateNumber = true
+			needCheckBrand = true
+		}
 	}
 
-	return motorcycle
-}
-
-func (srv *motorcycleService) checkPlateNumberDuplicate(plateNumber string) bool {
-	count := srv.repository.CountByForm(form2.MotorcycleFilterForm{PlateNumber: plateNumber})
-	if count > 0 {
-		return true
-	}
-	return false
-}
-
-func (srv *motorcycleService) checkBrandExist(id int) bool {
-	brandRepo := repository.NewMotorcycleComponentBrandRepository()
-	count := brandRepo.CountByForm(form2.MotorcycleComponentBrandFilterForm{ID: id})
-	if count != 1 {
-		return false
+	if needCheckPlateNumber {
+		count := srv.repository.CountByForm(form2.MotorcycleFilterForm{PlateNumber: form.PlateNumber})
+		if count > 0 {
+			error2.ErrXtremeInvalidPayload("Plate Number has been registered")
+		}
 	}
 
-	return true
+	if needCheckBrand {
+		brandRepo := repository.NewMotorcycleComponentBrandRepository()
+		motorcycleBrand = brandRepo.FirstByForm(form2.MotorcycleComponentBrandFilterForm{ID: form.BrandId})
+	}
+
+	return motorcycle, motorcycleBrand
 }

@@ -6,9 +6,11 @@ import (
 
 type RentalPayment struct {
 	xtrememodel.BaseModel
-	RentalId uint    `gorm:"column:rentalId;type:int;not null"`
-	Amount   float64 `gorm:"column:amount;type:float;not null"`
-	MethodId int     `gorm:"column:methodId;type:int;not null"`
+	RentalId      uint    `gorm:"column:rentalId;type:int;not null"`
+	Amount        float64 `gorm:"column:amount;type:float;not null"`
+	MethodId      int     `gorm:"column:methodId;type:int;not null"`
+	CreatedBy     *string `gorm:"column:createdBy;varchar(50);null"`
+	CreatedByName *string `gorm:"column:createdByName;varchar(250);null"`
 
 	Rental Rental `gorm:"foreignKey:RentalId"`
 }
