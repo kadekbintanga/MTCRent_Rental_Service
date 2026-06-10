@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/globalxtreme/go-identifier/data"
 	"gorm.io/gorm"
 
 	"service/internal/pkg/config"
@@ -12,6 +13,7 @@ import (
 
 type SettingConfigurationRepository interface {
 	core.TransactionInterface
+	core.EmployeeIdentifierInterface
 	core.FirstRepository[form.SettingConfigurationFilterForm, model.SettingConfiguration]
 	core.FindRepository[form.SettingConfigurationFilterForm, model.SettingConfiguration]
 
@@ -21,18 +23,23 @@ type SettingConfigurationRepository interface {
 func NewSettingConfigurationRepository(args ...*gorm.DB) SettingConfigurationRepository {
 	repository := settingConfigurationRepository{}
 	if len(args) > 0 {
-		repository.Transaction = args[0]
+		repository.tx = args[0]
 	}
 
 	return &repository
 }
 
 type settingConfigurationRepository struct {
-	Transaction *gorm.DB
+	tx       *gorm.DB
+	employee data.EmployeeIdentifierData
 }
 
 func (repo *settingConfigurationRepository) SetTransaction(tx *gorm.DB) {
-	repo.Transaction = tx
+	repo.tx = tx
+}
+
+func (repo *settingConfigurationRepository) SetEmployeeIdentifier(emplyee data.EmployeeIdentifierData) {
+	repo.employee = emplyee
 }
 
 func (repo *settingConfigurationRepository) FirstByForm(form form.SettingConfigurationFilterForm, args ...func(query *gorm.DB) *gorm.DB) model.SettingConfiguration {
@@ -64,7 +71,12 @@ func (repo *settingConfigurationRepository) FindByForm(form form.SettingConfigur
 func (repo *settingConfigurationRepository) Update(settingConfig model.SettingConfiguration, form form.SettingConfigurationForm) model.SettingConfiguration {
 	settingConfig.Value = form.Value
 
-	err := repo.Transaction.Updates(&settingConfig).Error
+	if repo.employee.ID != "" {
+		settingConfig.UpdatedBy = &repo.employee.ID
+		settingConfig.UpdatedByName = &repo.employee.FullName
+	}
+
+	err := repo.tx.Updates(&settingConfig).Error
 	if err != nil {
 		error2.ErrXtremeSettingConfigurationUpdate(err.Error())
 	}
