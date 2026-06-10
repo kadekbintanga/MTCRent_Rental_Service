@@ -282,6 +282,7 @@ func (srv *rentalService) Return(uuid string, form form2.RentalReturnForm) model
 		srv.processBlacklist(rental.Customer, lateDay)
 
 		parser := parser.RentalParser{Object: rental}
+
 		activity.UseActivity{Employee: srv.employee}.SetReference(&rental).SetParser(&parser).SetNewProperty(constant.ACTION_CREATE).
 			Save(fmt.Sprintf("Return Rental [%d]", rental.ID))
 

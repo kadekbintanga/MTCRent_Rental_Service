@@ -3,6 +3,7 @@ package saga
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	error2 "service/internal/pkg/error"
 	"service/internal/pkg/grpc/customer"
 	"service/internal/pkg/saga/grpc"
@@ -67,6 +68,7 @@ func (sg *customerSaga) UpdateCustomerStatus(request *customer.CustomerUpdateSta
 func (sg *customerSaga) Close() {
 	if r := recover(); r != nil {
 		if sg.rollbackData != nil {
+			fmt.Println("RUN THIS =========================================================")
 			sg.UpdateCustomerStatus(&customer.CustomerUpdateStatusRequest{
 				Uuid:            sg.rollbackData["uuid"].(string),
 				StatusId:        int32(sg.rollbackData["statusId"].(float64)),

@@ -63,10 +63,14 @@ func (srv *customerService) Save(uuid string) model.Customer {
 }
 
 func (srv *customerService) BlacklistCustomer(customer model.Customer, reason string) {
+	srv.saga = saga.NewCustomerSaga()
+	defer srv.saga.Close()
+
 	srv.repository = repository.NewCustomerRepository(srv.tx)
 	srv.repository.UpdateStatus(customer, option.CustomerSaveOption{StatusId: constant.CUSTOMER_STATUS_BLACKLISTED_ID})
 
 	srv.updateCustomerStatusSaga(customer, constant.CUSTOMER_STATUS_BLACKLISTED_ID, reason)
+
 }
 
 /** --- UNEXPORTED FUNCTIONS --- */
@@ -106,8 +110,6 @@ func (srv *customerService) getCustomerSaga(uuid string) option.CustomerSaveOpti
 }
 
 func (srv *customerService) updateCustomerStatusSaga(customer model.Customer, statusId int, blacklistReason string) {
-	srv.saga = saga.NewCustomerSaga()
-	defer srv.saga.Close()
 	payload := grpc.CustomerUpdateStatusRequest{
 		Uuid:            customer.UUID,
 		StatusId:        int32(statusId),
