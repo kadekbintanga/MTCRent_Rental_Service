@@ -279,6 +279,7 @@ func (srv *rentalService) Return(uuid string, form form2.RentalReturnForm) model
 
 		rental.Motorcycle = motorcycle
 		srv.customerService.SetTransaction(tx)
+		srv.customerService.SetEmployeeIdentifier(srv.employee)
 		srv.processBlacklist(rental.Customer, lateDay)
 
 		parser := parser.RentalParser{Object: rental}

@@ -14,3 +14,11 @@ type CustomerSaveOption struct {
 	Phone     string
 	StatusId  int
 }
+
+type CustomerUpdateStatusRollbackOption struct {
+	UUID            string
+	StatusId        int32
+	BlacklistReason string
+	CreatedBy       string
+	CreatedByName   string
+}

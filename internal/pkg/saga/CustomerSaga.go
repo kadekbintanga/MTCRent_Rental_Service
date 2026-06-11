@@ -3,8 +3,8 @@ package saga
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	error2 "service/internal/pkg/error"
+	"service/internal/pkg/form/option"
 	"service/internal/pkg/grpc/customer"
 	"service/internal/pkg/saga/grpc"
 	"time"
@@ -12,7 +12,7 @@ import (
 
 type CustomerSaga interface {
 	FirstCustomerByUUID(request *customer.FirstCustomerRequest) map[string]interface{}
-	UpdateCustomerStatus(request *customer.CustomerUpdateStatusRequest) map[string]interface{}
+	UpdateCustomerStatus(request *customer.CustomerUpdateStatusRequest) option.CustomerUpdateStatusRollbackOption
 
 	Close()
 }
@@ -22,7 +22,7 @@ func NewCustomerSaga() CustomerSaga {
 }
 
 type customerSaga struct {
-	rollbackData map[string]interface{}
+	rollbackUpdateStatus *option.CustomerUpdateStatusRollbackOption
 }
 
 func (sg *customerSaga) FirstCustomerByUUID(request *customer.FirstCustomerRequest) map[string]interface{} {
@@ -42,7 +42,7 @@ func (sg *customerSaga) FirstCustomerByUUID(request *customer.FirstCustomerReque
 	return customer
 }
 
-func (sg *customerSaga) UpdateCustomerStatus(request *customer.CustomerUpdateStatusRequest) map[string]interface{} {
+func (sg *customerSaga) UpdateCustomerStatus(request *customer.CustomerUpdateStatusRequest) option.CustomerUpdateStatusRollbackOption {
 	ctx, cancle := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancle()
 
@@ -51,14 +51,14 @@ func (sg *customerSaga) UpdateCustomerStatus(request *customer.CustomerUpdateSta
 		error2.ErrXtremeCustomerUpdate(err.Error())
 	}
 
-	var rollbackData map[string]interface{}
+	var rollbackData option.CustomerUpdateStatusRollbackOption
 	if result := resp.GetResult(); len(result) > 0 {
 		json.Unmarshal(result, &rollbackData)
 	}
-	rollbackData["createdBy"] = request.CreatedBy
-	rollbackData["createdByName"] = request.CreatedByName
+	rollbackData.CreatedBy = request.CreatedBy
+	rollbackData.CreatedByName = request.CreatedByName
 
-	sg.rollbackData = rollbackData
+	sg.rollbackUpdateStatus = &rollbackData
 
 	return rollbackData
 }
@@ -67,12 +67,13 @@ func (sg *customerSaga) UpdateCustomerStatus(request *customer.CustomerUpdateSta
 
 func (sg *customerSaga) Close() {
 	if r := recover(); r != nil {
-		if sg.rollbackData != nil {
-			fmt.Println("RUN THIS =========================================================")
+		if sg.rollbackUpdateStatus != nil {
 			sg.UpdateCustomerStatus(&customer.CustomerUpdateStatusRequest{
-				Uuid:            sg.rollbackData["uuid"].(string),
-				StatusId:        int32(sg.rollbackData["statusId"].(float64)),
-				BlacklistReason: sg.rollbackData["blacklistReason"].(string),
+				Uuid:            sg.rollbackUpdateStatus.UUID,
+				StatusId:        sg.rollbackUpdateStatus.StatusId,
+				BlacklistReason: sg.rollbackUpdateStatus.BlacklistReason,
+				CreatedBy:       sg.rollbackUpdateStatus.CreatedBy,
+				CreatedByName:   sg.rollbackUpdateStatus.CreatedByName,
 			})
 		}
 		panic(r)
