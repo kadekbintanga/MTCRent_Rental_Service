@@ -1,11 +1,13 @@
 package rabbitmq
 
 import (
+	"service/internal/app/rabbitmq"
+	"service/internal/pkg/config"
+	"service/internal/pkg/constant"
+
 	xtremepkg "github.com/globalxtreme/go-core/v2/pkg"
 	xtremerabbitmq "github.com/globalxtreme/go-core/v2/rabbitmq"
 	"github.com/spf13/cobra"
-	"service/internal/app/rabbitmq"
-	"service/internal/pkg/config"
 )
 
 type RabbitMQConsumerAsyncWorkflowCommand struct{}
@@ -17,6 +19,7 @@ func (class *RabbitMQConsumerAsyncWorkflowCommand) Command(cobraCmd *cobra.Comma
 		Run: func(cmd *cobra.Command, args []string) {
 			xtremepkg.InitDevMode()
 			xtremepkg.InitRedisPool()
+			xtremepkg.InitRedisAsyncWorkflowPool()
 
 			DBClose := config.InitDB()
 			defer DBClose()
@@ -42,6 +45,10 @@ func (class *RabbitMQConsumerAsyncWorkflowCommand) Handle() {
 		{
 			Queue:    "service.customer.convert.async-workflow-1", // TODO: Hanya contoh. nanti langsung hapus saja
 			Consumer: &rabbitmq.TestingAsyncWorkflowExecutor{},
+		},
+		{
+			Queue:    constant.ASYNC_WORKFLOW_RENTAL_CUSTOMER_UPDATE,
+			Consumer: &rabbitmq.CustomerUpdateExecutor{},
 		},
 	})
 }

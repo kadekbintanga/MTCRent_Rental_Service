@@ -7,6 +7,7 @@ import (
 	"service/internal/pkg/config"
 	"service/internal/pkg/constant"
 	error2 "service/internal/pkg/error"
+	form2 "service/internal/pkg/form"
 	"service/internal/pkg/form/option"
 	grpc "service/internal/pkg/grpc/customer"
 	"service/internal/pkg/model"
@@ -23,6 +24,7 @@ type CustomerService interface {
 
 	Save(uuid string) model.Customer
 	BlacklistCustomer(customer model.Customer, reason string)
+	Update(form form2.CustomerUpdateForm)
 }
 
 func NewCustomerService() CustomerService {
@@ -73,7 +75,37 @@ func (srv *customerService) BlacklistCustomer(customer model.Customer, reason st
 
 }
 
+func (srv *customerService) Update(form form2.CustomerUpdateForm) {
+	customer := srv.prepare(&form.ID)
+
+	config.PgSQL.Transaction(func(tx *gorm.DB) error {
+		srv.repository.SetTransaction(tx)
+		if form.Deleted {
+			if customer.ID != 0 {
+				srv.repository.Delete(customer)
+			}
+		} else {
+			customer = srv.repository.UpdateOrCreate(customer, form)
+		}
+
+		return nil
+	})
+}
+
 /** --- UNEXPORTED FUNCTIONS --- */
+
+func (srv *customerService) prepare(id *uint) model.Customer {
+	srv.repository = repository.NewCustomerRepository()
+
+	var customer model.Customer
+	if id != nil {
+		customer = srv.repository.FirstByForm(option.CustomerOption{
+			ID: int(*id),
+		})
+	}
+
+	return customer
+}
 
 func (srv *customerService) getCustomerSaga(uuid string) option.CustomerSaveOption {
 	srv.saga = saga.NewCustomerSaga()

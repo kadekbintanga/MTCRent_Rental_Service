@@ -6,6 +6,7 @@ import (
 	"service/internal/pkg/config"
 	"service/internal/pkg/core"
 	error2 "service/internal/pkg/error"
+	"service/internal/pkg/form"
 	"service/internal/pkg/form/option"
 	"service/internal/pkg/model"
 )
@@ -15,8 +16,9 @@ type CustomerRepository interface {
 	core.FirstRepository[option.CustomerOption, model.Customer]
 
 	Create(opt option.CustomerSaveOption) model.Customer
-	UpdateStatusByID(customerId uint, statusId int)
 	UpdateStatus(customer model.Customer, opt option.CustomerSaveOption) model.Customer
+	UpdateOrCreate(customer model.Customer, form form.CustomerUpdateForm) model.Customer
+	Delete(customer model.Customer)
 }
 
 func NewCustomerRepository(args ...*gorm.DB) CustomerRepository {
@@ -81,10 +83,28 @@ func (repo *customerRepository) UpdateStatus(customer model.Customer, opt option
 	return customer
 }
 
-func (repo *customerRepository) UpdateStatusByID(customerId uint, statusId int) {
-	err := repo.tx.Model(&model.Customer{}).Where(`customers."id" = ?`, customerId).Update("statusId", statusId).Error
+func (repo *customerRepository) UpdateOrCreate(customer model.Customer, form form.CustomerUpdateForm) model.Customer {
+	customer.ID = form.ID
+	customer.UUID = form.UUID
+	customer.Name = form.Name
+	customer.IDNumber = form.IDNumber
+	customer.SIMNumber = form.SIMNumber
+	customer.Phone = form.Phone
+	customer.StatusId = form.StatusId
+
+	err := repo.tx.Save(&customer).Error
 	if err != nil {
 		error2.ErrXtremeCustomerUpdate(err.Error())
+	}
+
+	return customer
+
+}
+
+func (repo *customerRepository) Delete(customer model.Customer) {
+	err := repo.tx.Delete(&customer).Error
+	if err != nil {
+		error2.ErrXtremeCustomerDelete(err.Error())
 	}
 }
 

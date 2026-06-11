@@ -14,10 +14,7 @@ const RABBITMQ_QUEUE_SERVICE_DOMAIN_FEATURE_ACTION_PROCESSED = "service.domain.f
 /** --- ASYNC WORKFLOW --- */
 
 const ASYNC_WORKFLOW_SERVICE_DOMAIN_FEATURE_ACTION = "service.domain.feature.action.async-workflow"
-const ASYNC_WORKFLOW_CUSTOMER_STATUS_BLACKLISTED_ACTION = "customer.status.blakclisted.async-workflow"
+const ASYNC_WORKFLOW_RENTAL_CUSTOMER_UPDATE = "rental.customer.status.update.async-workflow"
 
 /** --- ASYNC SERVICE --- */
 const ASYNC_WORKFLOW_SERVICE_CUSTOMER = "customers"
-
-/** --- CUSTOMER --- */
-const RABBITMQ_EXCHANGE_RENTAL_CUSTOMER_STATUS_UPDATE = "rental.customer.status.update.exchange"

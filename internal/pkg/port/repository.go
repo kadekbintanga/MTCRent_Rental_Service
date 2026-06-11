@@ -20,7 +20,6 @@ type CustomerRepository interface {
 	core.FirstRepository[option.CustomerOption, model.Customer]
 
 	Create(opt option.CustomerSaveOption) model.Customer
-	UpdateStatusByID(customerId uint, statusId int)
 }
 
 type MotorcycleRepository interface {

@@ -17,10 +17,8 @@ import (
 	"service/internal/rental/repository"
 	"time"
 
-	xtremerabbitmq "github.com/globalxtreme/go-core/v2/rabbitmq"
 	"github.com/globalxtreme/go-identifier/data"
 	"gorm.io/gorm"
-	"gorm.io/gorm/utils"
 )
 
 type RentalService interface {
@@ -382,36 +380,6 @@ func (srv *rentalService) processBlacklist(customer model.Customer, lateDay int)
 	limitDay := core.ToInt(blacklistLimitDay.Value)
 	if lateDay > limitDay {
 		srv.customerService.BlacklistCustomer(customer, constant.CUSTOMER_PASS_DAY_LIMIT_REASON)
-	}
-}
-
-func (srv *rentalService) sendBlacklistCustomer(customer model.Customer) {
-	async := xtremerabbitmq.GXAsyncWorkflow{
-		Action:        constant.ASYNC_WORKFLOW_CUSTOMER_STATUS_BLACKLISTED_ACTION,
-		Description:   fmt.Sprintf("Blacklist customer for id : %d", customer.ID),
-		ReferenceId:   utils.ToString(customer.ID),
-		ReferenceType: customer.TableName(),
-		Strict:        false,
-	}
-
-	async.OnStep(xtremerabbitmq.GXAsyncWorkflowStepOpt{
-		Service:     constant.ASYNC_WORKFLOW_SERVICE_CUSTOMER,
-		Queue:       constant.RABBITMQ_EXCHANGE_RENTAL_CUSTOMER_STATUS_UPDATE,
-		Description: "Update customer status in customer service",
-		Payload: map[string]interface{}{
-			"uuid":            customer.UUID,
-			"statusId":        constant.CUSTOMER_STATUS_BLACKLISTED_ID,
-			"blacklistReason": constant.CUSTOMER_PASS_DAY_LIMIT_REASON,
-		},
-	})
-
-	err := core.ErrorAsyncHandler(func() error {
-		async.Push()
-		return nil
-	})
-
-	if err != nil {
-		error2.ErrXtremeAsyncWorkflowPush(err.Error())
 	}
 }
 
