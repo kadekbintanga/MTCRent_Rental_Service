@@ -30,6 +30,10 @@ func testingRouter(router *mux.Router) {
 func motorcycleRouter(router *mux.Router) {
 	router = router.PathPrefix("/motorcycles").Subrouter()
 
+	var staticHandler handler.MotorcycleStaticHandler
+	router.HandleFunc("/components/statics/motorcycle-types", staticHandler.MotorcycleType).Methods("GET")
+	router.HandleFunc("/components/statics/motorcycle-statuses", staticHandler.MotorcycleStatus).Methods("GET")
+
 	var brandHandler handler.MotorcycleComponentBrandHandler
 	router.HandleFunc("/components/brands", brandHandler.Get).Methods("GET")
 	router.HandleFunc("/components/brands", brandHandler.Create).Methods("POST")
@@ -52,6 +56,11 @@ func settingRouter(router *mux.Router) {
 }
 
 func rentalRouter(router *mux.Router) {
+	var staticHandler handler.RentalStaticHandler
+	router.HandleFunc("/components/statics/rental-statuses", staticHandler.RentalStatus).Methods("GET")
+	router.HandleFunc("/components/statics/payment-methods", staticHandler.RentalPaymentMethod).Methods("GET")
+	router.HandleFunc("/components/statics/refund-methods", staticHandler.RentalRefundMethod).Methods("GET")
+
 	var rentalHandler handler.RentalHandler
 	router.HandleFunc("", rentalHandler.Create).Methods("POST")
 	router.HandleFunc("/{uuid}", rentalHandler.Update).Methods("PUT")
