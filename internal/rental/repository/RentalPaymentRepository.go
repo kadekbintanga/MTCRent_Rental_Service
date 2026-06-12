@@ -1,11 +1,16 @@
 package repository
 
 import (
+	"net/url"
+	"service/internal/pkg/config"
 	"service/internal/pkg/core"
 	error2 "service/internal/pkg/error"
+	"service/internal/pkg/form"
 	"service/internal/pkg/form/option"
 	"service/internal/pkg/model"
+	"strconv"
 
+	xtrememodel "github.com/globalxtreme/go-core/v2/model"
 	"github.com/globalxtreme/go-identifier/data"
 	"gorm.io/gorm"
 )
@@ -13,6 +18,7 @@ import (
 type RentalPaymentRepository interface {
 	core.TransactionInterface
 	core.EmployeeIdentifierInterface
+	core.PaginateRepository[form.RentalPaymentFilterForm, model.RentalPayment]
 
 	Create(opt option.RentalPaymentOption) model.RentalPayment
 }
@@ -39,6 +45,20 @@ func (repo *rentalPaymentRepository) SetEmployeeIdentifier(emplyee data.Employee
 	repo.employee = emplyee
 }
 
+func (repo *rentalPaymentRepository) PaginateByForm(form form.RentalPaymentFilterForm) ([]model.RentalPayment, interface{}) {
+	parameter := url.Values{}
+	parameter.Set("page", strconv.Itoa(form.Page))
+	parameter.Set("limit", strconv.Itoa(form.Limit))
+
+	query := repo.prepareAndFilter(form)
+	payments, pagination, err := xtrememodel.Paginate(query, parameter, model.RentalPayment{})
+	if err != nil {
+		error2.ErrXtremeRentalPaymentGet(err.Error())
+	}
+
+	return payments, pagination
+}
+
 func (repo *rentalPaymentRepository) Create(opt option.RentalPaymentOption) model.RentalPayment {
 	rentalPayment := model.RentalPayment{
 		RentalId: opt.RentalId,
@@ -57,4 +77,33 @@ func (repo *rentalPaymentRepository) Create(opt option.RentalPaymentOption) mode
 	}
 
 	return rentalPayment
+}
+
+/** --- UNEXPORTED FUNCTIONS --- */
+
+func (repo *rentalPaymentRepository) prepareAndFilter(form form.RentalPaymentFilterForm) *gorm.DB {
+	query := config.PgSQL
+
+	if form.ID > 0 {
+		query = query.Where(`rental_payments."id" = ?`, form.ID)
+	}
+
+	if form.MethodId != 0 {
+		query = query.Where(`rental_payments."methodId", ?`, form.MethodId)
+	}
+
+	if form.RentalUUID != "" {
+		query = query.Joins(`JOIN rentals ON rentals.id = rental_payments."rentalId"`).
+			Where(`rentals.uuid = ?`, form.RentalUUID)
+	}
+
+	if len(form.Preloads) > 0 {
+		for _, preload := range form.Preloads {
+			query = query.Preload(preload)
+		}
+	}
+
+	query = query.Order("id DESC")
+
+	return query
 }

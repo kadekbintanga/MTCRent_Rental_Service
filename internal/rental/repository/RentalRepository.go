@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"net/url"
 	"service/internal/pkg/config"
 	"service/internal/pkg/constant"
 	"service/internal/pkg/core"
@@ -9,7 +10,9 @@ import (
 	"service/internal/pkg/form"
 	"service/internal/pkg/form/option"
 	"service/internal/pkg/model"
+	"strconv"
 
+	xtrememodel "github.com/globalxtreme/go-core/v2/model"
 	"github.com/globalxtreme/go-identifier/data"
 	"gorm.io/gorm"
 )
@@ -19,6 +22,7 @@ type RentalRepository interface {
 	core.EmployeeIdentifierInterface
 	core.FirstRepository[form.RentalFilterForm, model.Rental]
 	core.FindRepository[form.RentalFilterForm, model.Rental]
+	core.PaginateRepository[form.RentalFilterForm, model.Rental]
 
 	Create(opt option.RentalOption) model.Rental
 	CountByForm(form form.RentalFilterForm) int64
@@ -74,6 +78,20 @@ func (repo *rentalRepository) FindByForm(form form.RentalFilterForm) []model.Ren
 	}
 
 	return rental
+}
+
+func (repo *rentalRepository) PaginateByForm(form form.RentalFilterForm) ([]model.Rental, interface{}) {
+	parameter := url.Values{}
+	parameter.Set("page", strconv.Itoa(form.Page))
+	parameter.Set("limit", strconv.Itoa(form.Limit))
+
+	query := repo.prepareAndFilter(form)
+	rentals, pagination, err := xtrememodel.Paginate(query, parameter, model.Rental{})
+	if err != nil {
+		error2.ErrXtremeRentalGet(err.Error())
+	}
+
+	return rentals, pagination
 }
 
 func (repo *rentalRepository) Create(opt option.RentalOption) model.Rental {

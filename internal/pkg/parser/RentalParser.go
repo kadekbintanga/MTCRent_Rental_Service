@@ -23,8 +23,25 @@ func (parser RentalParser) Get() []interface{} {
 func (parser RentalParser) First() interface{} {
 	rental := parser.Object
 
+	customer := map[string]interface{}{
+		"uuid":      rental.Customer.UUID,
+		"name":      rental.Customer.Name,
+		"idNumber":  rental.Customer.IDNumber,
+		"simNumber": rental.Customer.SIMNumber,
+		"phone":     rental.Customer.Phone,
+	}
+
+	motorcycle := map[string]interface{}{
+		"uuid":        rental.Motorcycle.UUID,
+		"plateNumber": rental.Motorcycle.PlateNumber,
+		"name":        rental.Motorcycle.Name,
+		"typeId":      constant.MotorcycleType{}.IDAndName(rental.Motorcycle.TypeId),
+	}
+
 	return map[string]interface{}{
 		"uuid":                  rental.UUID,
+		"customer":              customer,
+		"motorcycle":            motorcycle,
 		"motorcyclePlateNumber": rental.MotorcyclePlateNumber,
 		"rentDate":              rental.RentDate.Format("02/01/2006 15:04"),
 		"returnDatePlan":        rental.ReturnDatePlan.Format("02/01/2006 15:04"),

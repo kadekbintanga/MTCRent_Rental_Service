@@ -7,6 +7,7 @@ import (
 	otherService "service/internal/other/service"
 	form2 "service/internal/pkg/form"
 	"service/internal/pkg/parser"
+	"service/internal/rental/repository"
 	"service/internal/rental/service"
 	settingConfigRepo "service/internal/settingConfiguration/repository"
 
@@ -16,6 +17,35 @@ import (
 )
 
 type RentalHandler struct{}
+
+func (ctr RentalHandler) Get(w http.ResponseWriter, r *http.Request) {
+	form := form2.RentalFilterForm{
+		Preloads: []string{"Customer", "Motorcycle"},
+	}
+
+	form.FilterParse(r.URL.Query())
+
+	repo := repository.NewRentalRepository()
+	rentals, pagination := repo.PaginateByForm(form)
+
+	psr := parser.RentalParser{Array: rentals}
+	res := xtremeres.Response{Array: psr.Get(), Pagination: &pagination}
+	res.Success(w)
+}
+
+func (ctr RentalHandler) Detail(w http.ResponseWriter, r *http.Request) {
+	form := form2.RentalFilterForm{
+		UUID:     mux.Vars(r)["uuid"],
+		Preloads: []string{"Customer", "Motorcycle", "RentalPayments", "RentalRefunds"},
+	}
+
+	repo := repository.NewRentalRepository()
+	rental := repo.FirstByForm(form)
+
+	psr := parser.RentalParser{Object: rental}
+	res := xtremeres.Response{Object: psr.FirstFull()}
+	res.Success(w)
+}
 
 func (ctr RentalHandler) Create(w http.ResponseWriter, r *http.Request) {
 	form := form2.RentalForm{}

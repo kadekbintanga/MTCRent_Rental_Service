@@ -11,6 +11,8 @@ func Register(router *mux.Router) {
 	testingRouter(router) // TODO: Hanya contoh. nanti langsung hapus saja
 	motorcycleRouter(router)
 	settingRouter(router)
+	rentalPaymentRouter(router)
+	rentalRefundRouter(router)
 	rentalRouter(router)
 }
 
@@ -55,6 +57,20 @@ func settingRouter(router *mux.Router) {
 	router.HandleFunc("/configurations/{id}", settingConfig.Update).Methods("PUT")
 }
 
+func rentalPaymentRouter(router *mux.Router) {
+	router = router.PathPrefix("/payments").Subrouter()
+
+	var paymentHandler handler.RentalPaymentHandler
+	router.HandleFunc("", paymentHandler.Get).Methods("GET")
+}
+
+func rentalRefundRouter(router *mux.Router) {
+	router = router.PathPrefix("/refunds").Subrouter()
+
+	var refundHandler handler.RentalRefundHandler
+	router.HandleFunc("", refundHandler.Get).Methods("GET")
+}
+
 func rentalRouter(router *mux.Router) {
 	var staticHandler handler.RentalStaticHandler
 	router.HandleFunc("/components/statics/rental-statuses", staticHandler.RentalStatus).Methods("GET")
@@ -62,7 +78,9 @@ func rentalRouter(router *mux.Router) {
 	router.HandleFunc("/components/statics/refund-methods", staticHandler.RentalRefundMethod).Methods("GET")
 
 	var rentalHandler handler.RentalHandler
+	router.HandleFunc("", rentalHandler.Get).Methods("GET")
 	router.HandleFunc("", rentalHandler.Create).Methods("POST")
+	router.HandleFunc("/{uuid}", rentalHandler.Detail).Methods("GET")
 	router.HandleFunc("/{uuid}", rentalHandler.Update).Methods("PUT")
 	router.HandleFunc("/{uuid}/simulates", rentalHandler.Simulate).Methods("POST")
 	router.HandleFunc("/{uuid}/refunds", rentalHandler.Refund).Methods("POST")
