@@ -22,6 +22,7 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		xtremepkg.InitDevMode()
 		xtremepkg.InitHost()
+		xtremepkg.InitRedisPool()
 		xtremepkg.InitRedisAsyncWorkflowPool()
 
 		config.InitTZ()
