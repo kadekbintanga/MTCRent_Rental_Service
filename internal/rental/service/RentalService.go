@@ -315,7 +315,6 @@ func (srv *rentalService) checkCustomer(customerUUID string) model.Customer {
 	cacheKey := fmt.Sprintf("%s:%s", constant.CACHE_CUSTOMER, customerUUID)
 	res, err := redis.Bytes(conn.Do("GET", cacheKey))
 	if err == redis.ErrNil {
-		fmt.Println("==================== Data not found in redis, save new data from DB ===========================")
 		customer = srv.customerRepo.FirstByForm(option.CustomerOption{UUID: customerUUID})
 		if customer.ID == 0 {
 			customer = srv.customerService.Save(customerUUID)
@@ -328,7 +327,6 @@ func (srv *rentalService) checkCustomer(customerUUID string) model.Customer {
 	} else if err != nil {
 		error2.ErrXtremeRentalSave(err.Error())
 	} else {
-		fmt.Println("==================== Data not found in redis ===========================")
 		if err := json.Unmarshal(res, &customer); err != nil {
 			error2.ErrXtremeRentalSave(err.Error())
 		}
