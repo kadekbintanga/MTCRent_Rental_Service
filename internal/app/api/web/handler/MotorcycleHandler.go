@@ -27,7 +27,7 @@ func (ctr MotorcycleHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	psr := parser.MotorcycleParser{Array: motorcycles}
 
-	res := xtremeres.Response{Array: psr.Get(), Pagination: &pagination}
+	res := xtremeres.Response{Array: psr.Briefs(), Pagination: &pagination}
 	res.Success(w)
 }
 

@@ -10,8 +10,8 @@ import (
 	"service/internal/pkg/core"
 	form2 "service/internal/pkg/form"
 	"service/internal/pkg/parser"
-	"service/internal/settingConfiguration/repository"
-	"service/internal/settingConfiguration/service"
+	"service/internal/setting/repository"
+	"service/internal/setting/service"
 )
 
 type SettingConfigurationHandler struct{}

@@ -6,6 +6,7 @@ import (
 
 type RentalRefund struct {
 	xtrememodel.BaseModel
+	Number        string  `gorm:"column:number;type:varchar(250);not null"`
 	RentalId      uint    `gorm:"column:rentalId;type:int;not null"`
 	Amount        float64 `gorm:"column:amount;type:float;not null"`
 	MethodId      int     `gorm:"column:methodId;type:int;not null"`

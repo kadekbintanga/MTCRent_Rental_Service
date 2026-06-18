@@ -24,11 +24,11 @@ func (parser RentalPaymentParser) First() interface{} {
 	payment := parser.Object
 
 	return map[string]interface{}{
-		"id":         payment.ID,
-		"rentalUUID": payment.Rental.UUID,
-		"amount":     payment.Amount,
-		"methodId":   constant.RentalPaymentMethod{}.IDAndName(payment.MethodId),
-		"createdAt":  payment.CreatedAt.Format("02/01/2006 15:04"),
+		"id":        payment.ID,
+		"number":    payment.Number,
+		"amount":    payment.Amount,
+		"method":    constant.RentalPaymentMethod{}.IDAndName(payment.MethodId),
+		"createdAt": payment.CreatedAt.Format("02/01/2006 15:04"),
 	}
 }
 
@@ -37,6 +37,7 @@ func (parser RentalPaymentParser) CreateActivity(action string) interface{} {
 
 	return map[string]interface{}{
 		"id":        payment.ID,
+		"number":    payment.Number,
 		"rentalId":  payment.RentalId,
 		"amount":    payment.Amount,
 		"methodId":  constant.RentalPaymentMethod{}.IDAndName(payment.MethodId),

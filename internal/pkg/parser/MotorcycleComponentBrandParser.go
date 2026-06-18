@@ -47,13 +47,5 @@ func (parser MotorcycleBrandParser) DeleteActivity(action string) interface{} {
 }
 
 func (parser MotorcycleBrandParser) GeneralActivity(action string) interface{} {
-	if action == "onlyName" {
-		motorcycleBrand := parser.Object
-
-		return map[string]interface{}{
-			"name": motorcycleBrand.Name,
-		}
-	}
-
 	return parser.CreateActivity(action)
 }

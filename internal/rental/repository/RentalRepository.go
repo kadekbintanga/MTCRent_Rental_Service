@@ -96,6 +96,7 @@ func (repo *rentalRepository) PaginateByForm(form form.RentalFilterForm) ([]mode
 
 func (repo *rentalRepository) Create(opt option.RentalOption) model.Rental {
 	rental := model.Rental{
+		Number:                opt.Number,
 		CustomerId:            opt.CustomerId,
 		MotorcycleId:          opt.MotorcycleId,
 		MotorcyclePlateNumber: opt.MotorcyclePlateNumber,
@@ -105,13 +106,10 @@ func (repo *rentalRepository) Create(opt option.RentalOption) model.Rental {
 		PricePerDay:           opt.PricePerDay,
 		TotalRentPrice:        opt.TotalRentPrice,
 		StatusId:              constant.RENTAL_STATUS_ONGOING_ID,
-	}
-
-	if repo.employee.ID != "" {
-		rental.CreatedBy = &repo.employee.ID
-		rental.CreatedByName = &repo.employee.FullName
-		rental.UpdatedBy = &repo.employee.ID
-		rental.UpdatedByName = &repo.employee.FullName
+		CreatedBy:             &repo.employee.ID,
+		CreatedByName:         &repo.employee.FullName,
+		UpdatedBy:             &repo.employee.ID,
+		UpdatedByName:         &repo.employee.FullName,
 	}
 
 	err := repo.tx.Create(&rental).Error
@@ -137,11 +135,8 @@ func (repo *rentalRepository) Update(rental model.Rental, opt option.RentalOptio
 	}
 
 	rental.Note = opt.Note
-
-	if repo.employee.ID != "" {
-		rental.UpdatedBy = &repo.employee.ID
-		rental.UpdatedByName = &repo.employee.FullName
-	}
+	rental.UpdatedBy = &repo.employee.ID
+	rental.UpdatedByName = &repo.employee.FullName
 
 	err := repo.tx.Updates(&rental).Error
 	if err != nil {
@@ -156,11 +151,8 @@ func (repo *rentalRepository) Return(rental model.Rental, form form.RentalReturn
 	rental.PinaltyPrice = opt.PinaltyPrice
 	rental.StatusId = constant.RENTAL_STATUS_DONE_ID
 	rental.Note = form.Note
-
-	if repo.employee.ID != "" {
-		rental.UpdatedBy = &repo.employee.ID
-		rental.UpdatedByName = &repo.employee.FullName
-	}
+	rental.UpdatedBy = &repo.employee.ID
+	rental.UpdatedByName = &repo.employee.FullName
 
 	err := repo.tx.Updates(&rental).Error
 	if err != nil {

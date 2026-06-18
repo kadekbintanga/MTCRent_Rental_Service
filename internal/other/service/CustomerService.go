@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"service/internal/other/repository"
-	"service/internal/pkg/activity"
 	"service/internal/pkg/config"
 	"service/internal/pkg/constant"
 	error2 "service/internal/pkg/error"
@@ -12,11 +11,11 @@ import (
 	"service/internal/pkg/form/option"
 	grpc "service/internal/pkg/grpc/customer"
 	"service/internal/pkg/model"
-	"service/internal/pkg/parser"
 	"service/internal/pkg/saga"
 
 	xtremepkg "github.com/globalxtreme/go-core/v2/pkg"
 	"github.com/globalxtreme/go-identifier/data"
+	"github.com/gomodule/redigo/redis"
 	"gorm.io/gorm"
 )
 
@@ -24,7 +23,7 @@ type CustomerService interface {
 	SetTransaction(tx *gorm.DB)
 	SetEmployeeIdentifier(employee data.EmployeeIdentifierData)
 
-	Save(uuid string) model.Customer
+	FirstOrCreate(uuid string) model.Customer
 	BlacklistCustomer(customer model.Customer, reason string)
 	Update(form form2.CustomerUpdateForm)
 }
@@ -48,22 +47,45 @@ func (srv *customerService) SetEmployeeIdentifier(employee data.EmployeeIdentifi
 	srv.employee = employee
 }
 
-func (srv *customerService) Save(uuid string) model.Customer {
-	dataCustomer := srv.getCustomerSaga(uuid)
+func (srv *customerService) FirstOrCreate(uuid string) model.Customer {
+	conn := xtremepkg.RedisPool.Get()
+	defer conn.Close()
 
 	var customer model.Customer
-	config.PgSQL.Transaction(func(tx *gorm.DB) error {
-		srv.repository = repository.NewCustomerRepository(tx)
-		customer = srv.repository.Create(dataCustomer)
+	cacheKey := fmt.Sprintf("%s:%s", constant.CACHE_CUSTOMER, uuid)
+	res, err := redis.Bytes(conn.Do("GET", cacheKey))
+	if err == redis.ErrNil {
+		srv.repository = repository.NewCustomerRepository()
+		customer = srv.repository.FirstByForm(option.CustomerOption{UUID: uuid})
+		if customer.ID == 0 {
+			sagaCustomer := srv.getCustomerSaga(uuid)
+			config.PgSQL.Transaction(func(tx *gorm.DB) error {
+				srv.repository.SetTransaction(tx)
+				customer = srv.repository.Create(sagaCustomer)
 
-		parser := parser.CustomerParser{Object: customer}
-		activity.UseActivity{Employee: srv.employee}.SetReference(&customer).SetParser(&parser).SetNewProperty(constant.ACTION_CREATE).
-			Save(fmt.Sprintf("Save new Customer [%d]", customer.ID))
+				return nil
+			})
+		}
+		if customer.StatusId == constant.CUSTOMER_STATUS_BLACKLISTED_ID {
+			error2.ErrXtremeInvalidPayload("Customer was blacklisted")
+		}
+		if *customer.Deleted {
+			error2.ErrXtremeInvalidPayload("Customer was deleted")
+		}
+		data, _ := json.Marshal(customer)
+		_, err := conn.Do("SETEX", cacheKey, constant.CACHE_TTL_COMPONENT, data)
+		if err != nil {
+			error2.ErrXtremeCustomerSave("Redis : " + err.Error())
+		}
+	} else if err != nil {
+		error2.ErrXtremeCustomerSave("Redis : " + err.Error())
+	} else {
+		if err := json.Unmarshal(res, &customer); err != nil {
+			error2.ErrXtremeCustomerSave("Redis : " + err.Error())
+		}
+	}
 
-		return nil
-	})
 	return customer
-
 }
 
 func (srv *customerService) BlacklistCustomer(customer model.Customer, reason string) {
@@ -92,24 +114,24 @@ func (srv *customerService) Update(form form2.CustomerUpdateForm) {
 	defer conn.Close()
 
 	customer := srv.prepare(&form.ID)
+	if customer.ID == 0 {
+		return
+	}
 	cacheKey := fmt.Sprintf("%s:%s", constant.CACHE_CUSTOMER, customer.UUID)
 
 	config.PgSQL.Transaction(func(tx *gorm.DB) error {
-		srv.repository.SetTransaction(tx)
+		srv.repository = repository.NewCustomerRepository(tx)
+		customer = srv.repository.Update(customer, form)
 		if form.Deleted {
-			if customer.ID != 0 {
-				srv.repository.Delete(customer)
-				_, err := conn.Do("DEL", cacheKey)
-				if err != nil {
-					error2.ErrXtremeCustomerDelete(err.Error())
-				}
+			_, err := conn.Do("DEL", cacheKey)
+			if err != nil {
+				error2.ErrXtremeCustomerUpdate("Redis : " + err.Error())
 			}
 		} else {
-			customer = srv.repository.UpdateOrCreate(customer, form)
 			data, _ := json.Marshal(customer)
 			_, err := conn.Do("SETEX", cacheKey, constant.CACHE_TTL_COMPONENT, data)
 			if err != nil {
-				error2.ErrXtremeCustomerUpdate(err.Error())
+				error2.ErrXtremeCustomerUpdate("Redis : " + err.Error())
 			}
 		}
 

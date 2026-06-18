@@ -8,16 +8,16 @@ import (
 	xtremeres "github.com/globalxtreme/go-core/v2/response"
 )
 
-type MotorcycleStaticHandler struct{}
+type MotorcycleComponentStaticHandler struct{}
 
-func (ctr MotorcycleStaticHandler) MotorcycleType(w http.ResponseWriter, r *http.Request) {
+func (ctr MotorcycleComponentStaticHandler) MotorcycleType(w http.ResponseWriter, r *http.Request) {
 	motorcycleType := core.IDName{}.Get(constant.MotorcycleType{})
 
 	res := xtremeres.Response{Array: motorcycleType}
 	res.Success(w)
 }
 
-func (ctr MotorcycleStaticHandler) MotorcycleStatus(w http.ResponseWriter, r *http.Request) {
+func (ctr MotorcycleComponentStaticHandler) MotorcycleStatus(w http.ResponseWriter, r *http.Request) {
 	motorcycleStatus := core.IDName{}.Get(constant.MotorcycleStatus{})
 
 	res := xtremeres.Response{Array: motorcycleStatus}

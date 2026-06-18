@@ -24,11 +24,11 @@ func (parser RentalRefundParser) First() interface{} {
 	refund := parser.Object
 
 	return map[string]interface{}{
-		"id":         refund.ID,
-		"rentalUUID": refund.Rental.UUID,
-		"amount":     refund.Amount,
-		"methodId":   constant.RentalRefundMethod{}.IDAndName(refund.MethodId),
-		"createdAt":  refund.CreatedAt.Format("02/01/2006 15:04"),
+		"id":        refund.ID,
+		"number":    refund.Number,
+		"amount":    refund.Amount,
+		"method":    constant.RentalRefundMethod{}.IDAndName(refund.MethodId),
+		"createdAt": refund.CreatedAt.Format("02/01/2006 15:04"),
 	}
 }
 
@@ -37,6 +37,7 @@ func (parser RentalRefundParser) CreateActivity(action string) interface{} {
 
 	return map[string]interface{}{
 		"id":        refund.ID,
+		"number":    refund.Number,
 		"rentalId":  refund.RentalId,
 		"amount":    refund.Amount,
 		"methodId":  constant.RentalRefundMethod{}.IDAndName(refund.MethodId),

@@ -13,7 +13,7 @@ import (
 	form2 "service/internal/pkg/form"
 	"service/internal/pkg/model"
 	"service/internal/pkg/parser"
-	"service/internal/settingConfiguration/repository"
+	"service/internal/setting/repository"
 )
 
 type SettingConfigurationService interface {

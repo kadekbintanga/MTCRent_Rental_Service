@@ -8,6 +8,7 @@ import (
 
 type Rental struct {
 	xtrememodel.BaseModelUUID
+	Number                string    `gorm:"column:number;type:varchar(250);not null"`
 	CustomerId            uint      `gorm:"column:customerId;type:int;not null"`
 	MotorcycleId          uint      `gorm:"column:motorcycleId;type:int;not null"`
 	MotorcyclePlateNumber string    `gorm:"column:motorcyclePlateNumber;type:varchar(250);not null"`
@@ -26,10 +27,10 @@ type Rental struct {
 	UpdatedBy             *string   `gorm:"column:updatedBy;varchar(50);null"`
 	UpdatedByName         *string   `gorm:"column:updatedByName;varchar(250);null"`
 
-	Customer       Customer        `gorm:"foreignKey:CustomerId"`
-	Motorcycle     Motorcycle      `gorm:"foreignKey:MotorcycleId"`
-	RentalPayments []RentalPayment `gorm:"foreignKey:RentalId;references:ID"`
-	RentalRefunds  []RentalRefund  `gorm:"foreignKey:RentalId;references:ID"`
+	Customer   Customer        `gorm:"foreignKey:CustomerId"`
+	Motorcycle Motorcycle      `gorm:"foreignKey:MotorcycleId"`
+	Payments   []RentalPayment `gorm:"foreignKey:RentalId;references:ID"`
+	Refunds    []RentalRefund  `gorm:"foreignKey:RentalId;references:ID"`
 }
 
 func (Rental) TableName() string {

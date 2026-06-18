@@ -27,24 +27,59 @@ func (parser MotorcycleParser) First() interface{} {
 		"uuid":        motorcycle.UUID,
 		"plateNumber": motorcycle.PlateNumber,
 		"name":        motorcycle.Name,
-		"typeId":      constant.MotorcycleType{}.IDAndName(motorcycle.TypeId),
+		"type":        constant.MotorcycleType{}.IDAndName(motorcycle.TypeId),
 		"year":        motorcycle.Year,
 		"pricePerDay": motorcycle.PricePerDay,
-		"statusId":    constant.MotorcycleStatus{}.IDAndName(motorcycle.StatusId),
+		"status":      constant.MotorcycleStatus{}.IDAndName(motorcycle.StatusId),
 		"brandId":     motorcycle.BrandId,
 		"brandName":   motorcycle.Brand.Name,
+		"createdBy":   motorcycle.CreatedByName,
+		"updatedBy":   motorcycle.UpdatedByName,
 		"createdAt":   motorcycle.CreatedAt.Format("02/01/2006 15:04"),
 		"updatedAt":   motorcycle.UpdatedAt.Format("02/01/2006 15:04"),
 	}
 }
 
-func (parser MotorcycleParser) CreateActivity(action string) interface{} {
-	motocycle := parser.Object
+func (parser MotorcycleParser) Briefs() []interface{} {
+	var result []interface{}
+
+	for _, motorcycle := range parser.Array {
+		firstParser := MotorcycleParser{Object: motorcycle}
+		result = append(result, firstParser.Brief())
+	}
+	return result
+}
+
+func (parser MotorcycleParser) Brief() interface{} {
+	motorcycle := parser.Object
 
 	return map[string]interface{}{
-		"id":        motocycle.ID,
-		"name":      motocycle.Name,
-		"createdAt": motocycle.CreatedAt.Format("02/01/2006 15:04"),
+		"uuid":        motorcycle.UUID,
+		"plateNumber": motorcycle.PlateNumber,
+		"name":        motorcycle.Name,
+		"type":        constant.MotorcycleType{}.IDAndName(motorcycle.TypeId),
+		"status":      constant.MotorcycleStatus{}.IDAndName(motorcycle.StatusId),
+	}
+}
+
+func (parser MotorcycleParser) CreateActivity(action string) interface{} {
+	motorcycle := parser.Object
+
+	return map[string]interface{}{
+		"id":          motorcycle.ID,
+		"uuid":        motorcycle.UUID,
+		"plateNumber": motorcycle.PlateNumber,
+		"name":        motorcycle.Name,
+		"type":        constant.MotorcycleType{}.IDAndName(motorcycle.TypeId),
+		"year":        motorcycle.Year,
+		"pricePerDay": motorcycle.PricePerDay,
+		"status":      constant.MotorcycleStatus{}.IDAndName(motorcycle.StatusId),
+		"brandId":     motorcycle.BrandId,
+		"brandName":   motorcycle.Brand.Name,
+		"createdBy":   motorcycle.CreatedByName,
+		"updatedBy":   motorcycle.UpdatedByName,
+		"createdAt":   motorcycle.CreatedAt.Format("02/01/2006 15:04"),
+		"updatedAt":   motorcycle.UpdatedAt.Format("02/01/2006 15:04"),
 	}
 }
 

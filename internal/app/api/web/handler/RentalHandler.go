@@ -9,7 +9,7 @@ import (
 	"service/internal/pkg/parser"
 	"service/internal/rental/repository"
 	"service/internal/rental/service"
-	settingConfigRepo "service/internal/settingConfiguration/repository"
+	settingRepo "service/internal/setting/repository"
 
 	xtremeres "github.com/globalxtreme/go-core/v2/response"
 	"github.com/globalxtreme/go-identifier/data"
@@ -29,21 +29,21 @@ func (ctr RentalHandler) Get(w http.ResponseWriter, r *http.Request) {
 	rentals, pagination := repo.PaginateByForm(form)
 
 	psr := parser.RentalParser{Array: rentals}
-	res := xtremeres.Response{Array: psr.Get(), Pagination: &pagination}
+	res := xtremeres.Response{Array: psr.Briefs(), Pagination: &pagination}
 	res.Success(w)
 }
 
 func (ctr RentalHandler) Detail(w http.ResponseWriter, r *http.Request) {
 	form := form2.RentalFilterForm{
 		UUID:     mux.Vars(r)["uuid"],
-		Preloads: []string{"Customer", "Motorcycle", "RentalPayments", "RentalRefunds"},
+		Preloads: []string{"Customer", "Motorcycle", "Payments", "Refunds"},
 	}
 
 	repo := repository.NewRentalRepository()
 	rental := repo.FirstByForm(form)
 
 	psr := parser.RentalParser{Object: rental}
-	res := xtremeres.Response{Object: psr.FirstFull()}
+	res := xtremeres.Response{Object: psr.First()}
 	res.Success(w)
 }
 
@@ -61,7 +61,7 @@ func (ctr RentalHandler) Create(w http.ResponseWriter, r *http.Request) {
 	rental := srv.Create(form)
 
 	psr := parser.RentalParser{Object: rental}
-	res := xtremeres.Response{Object: psr.FirstFull()}
+	res := xtremeres.Response{Object: psr.First()}
 	res.Success(w)
 }
 
@@ -90,19 +90,6 @@ func (ctr RentalHandler) Update(w http.ResponseWriter, r *http.Request) {
 	res.Success(w)
 }
 
-func (ctr RentalHandler) Refund(w http.ResponseWriter, r *http.Request) {
-	form := form2.RentalRefundForm{}
-	form.APIParse(r)
-	form.Validate()
-
-	srv := service.NewRentalService()
-	refund := srv.Refund(mux.Vars(r)["uuid"], form)
-
-	psr := parser.RentalRefundParser{Object: refund}
-	res := xtremeres.Response{Object: psr.First()}
-	res.Success(w)
-}
-
 func (ctr RentalHandler) Return(w http.ResponseWriter, r *http.Request) {
 	form := form2.RentalReturnForm{}
 	form.APIParse(r)
@@ -111,13 +98,12 @@ func (ctr RentalHandler) Return(w http.ResponseWriter, r *http.Request) {
 	srv := service.NewRentalService()
 	srv.SetEmployeeIdentifier(data.AuthEmployee(r))
 	srv.SetCustomerRepository(otherRepo.NewCustomerRepository())
-	srv.SetSettingConfigurationRepository(settingConfigRepo.NewSettingConfigurationRepository())
+	srv.SetSettingConfigurationRepository(settingRepo.NewSettingConfigurationRepository())
 	srv.SetMotorcycleRepository(motorcycleRepo.NewMotorcycleRepository())
 	srv.SetCustomerService(otherService.NewCustomerService())
 
 	rental := srv.Return(mux.Vars(r)["uuid"], form)
 	psr := parser.RentalParser{Object: rental}
-	res := xtremeres.Response{Object: psr.FirstFull()}
+	res := xtremeres.Response{Object: psr.First()}
 	res.Success(w)
-
 }

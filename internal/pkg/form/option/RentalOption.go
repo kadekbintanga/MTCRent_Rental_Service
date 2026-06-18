@@ -3,6 +3,7 @@ package option
 import "time"
 
 type RentalOption struct {
+	Number                string
 	CustomerId            uint
 	MotorcycleId          uint
 	MotorcyclePlateNumber string

@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"gorm.io/gorm"
 
 	"service/internal/pkg/config"
@@ -17,6 +19,7 @@ type CustomerRepository interface {
 
 	Create(opt option.CustomerSaveOption) model.Customer
 	UpdateStatus(customer model.Customer, opt option.CustomerSaveOption) model.Customer
+	Update(customer model.Customer, form form.CustomerUpdateForm) model.Customer
 	UpdateOrCreate(customer model.Customer, form form.CustomerUpdateForm) model.Customer
 	Delete(customer model.Customer)
 }
@@ -46,8 +49,8 @@ func (repo *customerRepository) FirstByForm(opt option.CustomerOption, args ...f
 	}
 
 	var customer model.Customer
-	err := query.Find(&customer).Error
-	if err != nil {
+	err := query.First(&customer).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		error2.ErrXtremeCustomerGet(err.Error())
 	}
 
@@ -55,6 +58,7 @@ func (repo *customerRepository) FirstByForm(opt option.CustomerOption, args ...f
 }
 
 func (repo *customerRepository) Create(opt option.CustomerSaveOption) model.Customer {
+	deleted := false
 	customer := model.Customer{
 		ID:        uint(opt.ID),
 		UUID:      opt.UUID,
@@ -63,6 +67,7 @@ func (repo *customerRepository) Create(opt option.CustomerSaveOption) model.Cust
 		SIMNumber: opt.SIMNumber,
 		Phone:     opt.Phone,
 		StatusId:  opt.StatusId,
+		Deleted:   &deleted,
 	}
 
 	err := repo.tx.Create(&customer).Error
@@ -81,6 +86,23 @@ func (repo *customerRepository) UpdateStatus(customer model.Customer, opt option
 	}
 
 	return customer
+}
+
+func (repo *customerRepository) Update(customer model.Customer, form form.CustomerUpdateForm) model.Customer {
+	customer.Name = form.Name
+	customer.IDNumber = form.IDNumber
+	customer.SIMNumber = form.SIMNumber
+	customer.Phone = form.Phone
+	customer.StatusId = form.StatusId
+	customer.Deleted = &form.Deleted
+
+	err := repo.tx.Updates(&customer).Error
+	if err != nil {
+		error2.ErrXtremeCustomerUpdate(err.Error())
+	}
+
+	return customer
+
 }
 
 func (repo *customerRepository) UpdateOrCreate(customer model.Customer, form form.CustomerUpdateForm) model.Customer {

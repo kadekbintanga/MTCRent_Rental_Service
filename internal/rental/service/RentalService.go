@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"service/internal/pkg/activity"
@@ -12,15 +11,14 @@ import (
 	form2 "service/internal/pkg/form"
 	"service/internal/pkg/form/option"
 	"service/internal/pkg/model"
+	"service/internal/pkg/number"
 	"service/internal/pkg/parser"
 	"service/internal/pkg/port"
 	"service/internal/pkg/saga"
 	"service/internal/rental/repository"
 	"time"
 
-	xtremepkg "github.com/globalxtreme/go-core/v2/pkg"
 	"github.com/globalxtreme/go-identifier/data"
-	"github.com/gomodule/redigo/redis"
 	"gorm.io/gorm"
 )
 
@@ -35,7 +33,6 @@ type RentalService interface {
 	Create(form form2.RentalForm) model.Rental
 	Simulate(uuid string, form form2.RentalSimulateForm) map[string]interface{}
 	Update(uuid string, form form2.RentalUpdateteForm) model.Rental
-	Refund(uuid string, form form2.RentalRefundForm) model.RentalRefund
 	Return(uuid string, form form2.RentalReturnForm) model.Rental
 }
 
@@ -79,18 +76,21 @@ func (srv *rentalService) SetCustomerService(service port.CustomerService) {
 }
 
 func (srv *rentalService) Create(form form2.RentalForm) model.Rental {
-	customer := srv.checkCustomer(form.CustomerUUID)
+	customer := srv.customerService.FirstOrCreate(form.CustomerUUID)
 
 	rental := srv.prepare(nil, []string{})
 
 	srv.checkCustomerHasOngoingRental(form.CustomerUUID)
 
-	motorcycle := srv.checkMotorcycle(form.MotorcycleUUID)
+	motorcycle := srv.setMotorcycle(form.MotorcycleUUID)
 
 	rentDate := time.Now()
 	rentDay, totalRentPrice := srv.calculateTotalRentPrice(rentDate, form.ReturnDatePlan, motorcycle.PricePerDay)
 
+	number := &number.RentalRedisNumber{}
+
 	rentalOpt := option.RentalOption{
+		Number:                number.GenerateRentalNumber(),
 		CustomerId:            customer.ID,
 		MotorcycleId:          motorcycle.ID,
 		MotorcyclePlateNumber: motorcycle.PlateNumber,
@@ -109,13 +109,14 @@ func (srv *rentalService) Create(form form2.RentalForm) model.Rental {
 		rental = srv.repository.Create(rentalOpt)
 
 		payment := paymentRepository.Create(option.RentalPaymentOption{
+			Number:   number.GenerateRentalPaymentNumber(),
 			RentalId: rental.ID,
 			Amount:   form.PaymentAmount,
 			MethodId: form.PaymentMethodId,
 		})
 
 		rental.Customer = customer
-		rental.RentalPayments = append(rental.RentalPayments, payment)
+		rental.Payments = append(rental.Payments, payment)
 
 		motorcycle := srv.motorcycleRepo.UpdateStatus(motorcycle, form2.MotorcycleStatusUpdateForm{StatusId: constant.MOTORCYCLE_STATUS_RENTED_ID})
 
@@ -132,15 +133,15 @@ func (srv *rentalService) Create(form form2.RentalForm) model.Rental {
 }
 
 func (srv *rentalService) Simulate(uuid string, form form2.RentalSimulateForm) map[string]interface{} {
-	rental := srv.prepare(&uuid, []string{"RentalPayments", "RentalRefunds"})
+	rental := srv.prepare(&uuid, []string{"Payments", "Refunds"})
 	if rental.StatusId != constant.RENTAL_STATUS_ONGOING_ID {
-		error2.ErrXtremeRentalSimulate("Rental status is not ongoing")
+		error2.ErrXtremeInvalidPayload("Rental status is not ongoing")
 	}
 
 	lateDay, pinaltyPrice, totalPrice := srv.calculateTotalPrice(rental, form.ReturnDate)
 
-	totalLastPayment := srv.calculatePayment(rental.RentalPayments)
-	totalLastRefund := srv.calculateRefund(rental.RentalRefunds)
+	totalLastPayment := srv.calculatePayment(rental.Payments)
+	totalLastRefund := srv.calculateRefund(rental.Refunds)
 
 	var needPayment float64
 	var needRefund float64
@@ -170,9 +171,9 @@ func (srv *rentalService) Simulate(uuid string, form form2.RentalSimulateForm) m
 }
 
 func (srv *rentalService) Update(uuid string, form form2.RentalUpdateteForm) model.Rental {
-	rental := srv.prepare(&uuid, []string{})
+	rental := srv.prepare(&uuid, []string{"Customer", "Motorcycle", "Payments", "Refunds"})
 	if rental.StatusId != constant.RENTAL_STATUS_ONGOING_ID {
-		error2.ErrXtremeRentalSimulate("Rental status is not ongoing")
+		error2.ErrXtremeInvalidPayload("Rental status is not ongoing")
 	}
 
 	rentDay, totalRentPrice := srv.calculateTotalRentPrice(rental.RentDate, form.ReturnDatePlan, rental.PricePerDay)
@@ -181,6 +182,7 @@ func (srv *rentalService) Update(uuid string, form form2.RentalUpdateteForm) mod
 		RentDay:        uint(rentDay),
 		TotalRentPrice: totalRentPrice,
 		ReturnDatePlan: form.ReturnDatePlan,
+		Note:           form.Note,
 	}
 
 	parser := parser.RentalParser{Object: rental}
@@ -199,59 +201,24 @@ func (srv *rentalService) Update(uuid string, form form2.RentalUpdateteForm) mod
 	return rental
 }
 
-func (srv *rentalService) Refund(uuid string, form form2.RentalRefundForm) model.RentalRefund {
-	rental := srv.prepare(&uuid, []string{"RentalPayments", "RentalRefunds"})
-	if rental.StatusId != constant.RENTAL_STATUS_ONGOING_ID {
-		error2.ErrXtremeRentalSimulate("Rental status is not ongoing")
-	}
-
-	totalLastPayment := srv.calculatePayment(rental.RentalPayments)
-	totalLastRefund := srv.calculateRefund(rental.RentalRefunds)
-
-	totalRefund := totalLastRefund + form.RefundAmount
-
-	if totalRefund > totalLastPayment {
-		error2.ErrXtremeRentalRefund("The total refund cannot be greater than the payment already made")
-	}
-	var refund model.RentalRefund
-	config.PgSQL.Transaction(func(tx *gorm.DB) error {
-		refundRepository := repository.NewRentalRefundRepository(tx)
-
-		refund = refundRepository.Create(option.RentalRefundOption{
-			RentalId: rental.ID,
-			Amount:   form.RefundAmount,
-			MethodId: form.RefundMethodId,
-		})
-
-		parser := parser.RentalRefundParser{Object: refund}
-		activity.UseActivity{Employee: srv.employee}.SetReference(&refund).SetParser(&parser).SetNewProperty(constant.ACTION_CREATE).
-			Save(fmt.Sprintf("Create refund [%d] for rental [%d]", refund.ID, rental.ID))
-
-		return nil
-	})
-
-	return refund
-
-}
-
 func (srv *rentalService) Return(uuid string, form form2.RentalReturnForm) model.Rental {
-	rental := srv.prepare(&uuid, []string{"Motorcycle", "Customer", "RentalPayments", "RentalRefunds"})
+	rental := srv.prepare(&uuid, []string{"Motorcycle", "Customer", "Payments", "Refunds"})
 	if rental.StatusId != constant.RENTAL_STATUS_ONGOING_ID {
-		error2.ErrXtremeRentalReturn("Rental status is not ongoing")
+		error2.ErrXtremeInvalidPayload("Rental status is not ongoing")
 	}
 
 	lateDay, pinaltyPrice, totalPrice := srv.calculateTotalPrice(rental, form.ReturnDateActual)
 
-	totalLastPayment := srv.calculatePayment(rental.RentalPayments)
-	totalLastRefund := srv.calculateRefund(rental.RentalRefunds)
+	totalLastPayment := srv.calculatePayment(rental.Payments)
+	totalLastRefund := srv.calculateRefund(rental.Refunds)
 
 	remainingPayment := totalPrice - (totalLastPayment - totalLastRefund)
 	if remainingPayment < 0 {
-		error2.ErrXtremeRentalReturn(fmt.Sprintf("Need refund %.0f", math.Abs(remainingPayment)))
+		error2.ErrXtremeInvalidPayload(fmt.Sprintf("Need refund %.0f", math.Abs(remainingPayment)))
 	}
 
 	if remainingPayment != form.PaymentAmount {
-		error2.ErrXtremeRentalReturn(fmt.Sprintf("Payment amount should be %.0f", remainingPayment))
+		error2.ErrXtremeInvalidPayload(fmt.Sprintf("Payment amount should be %.0f", remainingPayment))
 	}
 
 	rentalOpt := option.RentalOption{
@@ -275,7 +242,7 @@ func (srv *rentalService) Return(uuid string, form form2.RentalReturnForm) model
 				Amount:   form.PaymentAmount,
 				MethodId: form.PaymentMethodId,
 			})
-			rental.RentalPayments = append(rental.RentalPayments, payment)
+			rental.Payments = append(rental.Payments, payment)
 		}
 
 		rental.Motorcycle = motorcycle
@@ -306,50 +273,17 @@ func (srv *rentalService) prepare(uuid *string, preloads []string) model.Rental 
 	return rental
 }
 
-func (srv *rentalService) checkCustomer(customerUUID string) model.Customer {
-	conn := xtremepkg.RedisPool.Get()
-	defer conn.Close()
-
-	var customer model.Customer
-
-	cacheKey := fmt.Sprintf("%s:%s", constant.CACHE_CUSTOMER, customerUUID)
-	res, err := redis.Bytes(conn.Do("GET", cacheKey))
-	if err == redis.ErrNil {
-		customer = srv.customerRepo.FirstByForm(option.CustomerOption{UUID: customerUUID})
-		if customer.ID == 0 {
-			customer = srv.customerService.Save(customerUUID)
-		}
-		data, _ := json.Marshal(customer)
-		_, err := conn.Do("SETEX", cacheKey, constant.CACHE_TTL_COMPONENT, data)
-		if err != nil {
-			error2.ErrXtremeRentalSave(err.Error())
-		}
-	} else if err != nil {
-		error2.ErrXtremeRentalSave(err.Error())
-	} else {
-		if err := json.Unmarshal(res, &customer); err != nil {
-			error2.ErrXtremeRentalSave(err.Error())
-		}
-	}
-
-	if customer.StatusId == constant.CUSTOMER_STATUS_BLACKLISTED_ID {
-		error2.ErrXtremeRentalSave("Customer was blacklisted")
-	}
-
-	return customer
-}
-
 func (srv *rentalService) checkCustomerHasOngoingRental(customerUUID string) {
 	count := srv.repository.CountByForm(form2.RentalFilterForm{CustomerUUID: customerUUID, StatusId: constant.RENTAL_STATUS_ONGOING_ID})
 	if count > 0 {
-		error2.ErrXtremeRentalSave("Customer has ongoing rental")
+		error2.ErrXtremeInvalidPayload("Customer has ongoing rental")
 	}
 }
 
-func (srv *rentalService) checkMotorcycle(motorcycleUUID string) model.Motorcycle {
+func (srv *rentalService) setMotorcycle(motorcycleUUID string) model.Motorcycle {
 	motorcycle := srv.motorcycleRepo.FirstByForm(form2.MotorcycleFilterForm{UUID: motorcycleUUID})
 	if motorcycle.StatusId != constant.MOTORCYCLE_STATUS_AVAILABLE_ID {
-		error2.ErrXtremeMotorcycleGet("Motorcycle is not available")
+		error2.ErrXtremeInvalidPayload("Motorcycle is not available")
 	}
 	return motorcycle
 }
@@ -408,11 +342,11 @@ func (srv *rentalService) processBlacklist(customer model.Customer, lateDay int)
 func (srv *rentalService) calculateTotalRentPrice(rentDate time.Time, returnDate string, pricePerDay float64) (int, float64) {
 	rentDay, err := core.DaysUntil(rentDate, returnDate)
 	if err != nil {
-		error2.ErrXtremeRentalSave(err.Error())
+		error2.ErrXtremeInvalidPayload(err.Error())
 	}
 
 	if rentDay < 0 {
-		error2.ErrXtremeRentalSave("Invalid return date plan")
+		error2.ErrXtremeInvalidPayload("Invalid return date plan")
 	}
 
 	totalRentPrice := float64(rentDay) * pricePerDay

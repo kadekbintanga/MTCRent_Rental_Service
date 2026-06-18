@@ -11,6 +11,6 @@ type CustomerService interface {
 	SetTransaction(tx *gorm.DB)
 	SetEmployeeIdentifier(employee data.EmployeeIdentifierData)
 
-	Save(uuid string) model.Customer
+	FirstOrCreate(uuid string) model.Customer
 	BlacklistCustomer(customer model.Customer, reason string)
 }
