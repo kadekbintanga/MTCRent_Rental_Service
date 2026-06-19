@@ -248,8 +248,7 @@ func (srv *rentalService) Return(uuid string, form form2.RentalReturnForm) model
 		}
 
 		rental.Motorcycle = motorcycle
-		srv.customerService.SetTransaction(tx)
-		srv.customerService.SetEmployeeIdentifier(srv.employee)
+		srv.processBlacklist(rental.Customer, lateDay, tx)
 
 		parser := parser.RentalParser{Object: rental}
 
@@ -258,7 +257,6 @@ func (srv *rentalService) Return(uuid string, form form2.RentalReturnForm) model
 
 		return nil
 	})
-	srv.processBlacklist(rental.Customer, lateDay)
 	return rental
 }
 
@@ -333,10 +331,12 @@ func (srv *rentalService) calculateTotalPrice(rental model.Rental, returnDate st
 
 }
 
-func (srv *rentalService) processBlacklist(customer model.Customer, lateDay int) {
+func (srv *rentalService) processBlacklist(customer model.Customer, lateDay int, tx *gorm.DB) {
 	blacklistLimitDay := srv.settingConfigRepo.FirstByForm(form2.SettingConfigurationFilterForm{Key: constant.SETTING_CONFIGURATION_KEY_BLACKLIST_LIMIT_DAY})
 	limitDay := core.ToInt(blacklistLimitDay.Value)
 	if lateDay > limitDay {
+		srv.customerService.SetTransaction(tx)
+		srv.customerService.SetEmployeeIdentifier(srv.employee)
 		srv.customerService.BlacklistCustomer(customer, "Customer exceeds the daily limit for return motorcycle")
 	}
 }
