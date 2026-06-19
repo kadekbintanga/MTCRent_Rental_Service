@@ -104,6 +104,7 @@ func (srv *rentalService) Create(form form2.RentalForm) model.Rental {
 	config.PgSQL.Transaction(func(tx *gorm.DB) error {
 		srv.repository.SetTransaction(tx)
 		paymentRepository := repository.NewRentalPaymentRepository(tx)
+		paymentRepository.SetEmployeeIdentifier(srv.employee)
 		srv.motorcycleRepo.SetTransaction(tx)
 
 		rental = srv.repository.Create(rentalOpt)
@@ -124,7 +125,7 @@ func (srv *rentalService) Create(form form2.RentalForm) model.Rental {
 
 		parser := parser.RentalParser{Object: rental}
 		activity.UseActivity{Employee: srv.employee}.SetReference(&rental).SetParser(&parser).SetNewProperty(constant.ACTION_CREATE).
-			Save(fmt.Sprintf("Create new Rental [%d]", rental.ID))
+			Save(fmt.Sprintf("Create new Rental %s [%d]", rental.Number, rental.ID))
 
 		return nil
 	})
@@ -195,7 +196,7 @@ func (srv *rentalService) Update(uuid string, form form2.RentalUpdateteForm) mod
 
 		parser.Object = rental
 		useActivity.SetReference(&rental).SetParser(&parser).SetNewProperty(constant.ACTION_UPDATE).
-			Save(fmt.Sprintf("Update rental [%d]", rental.ID))
+			Save(fmt.Sprintf("Update rental %s [%d]", rental.Number, rental.ID))
 		return nil
 	})
 	return rental
@@ -237,6 +238,7 @@ func (srv *rentalService) Return(uuid string, form form2.RentalReturnForm) model
 		motorcycle := srv.motorcycleRepo.UpdateStatus(rental.Motorcycle, form2.MotorcycleStatusUpdateForm{StatusId: constant.MOTORCYCLE_STATUS_AVAILABLE_ID})
 		if form.PaymentAmount != 0 {
 			paymentRepository := repository.NewRentalPaymentRepository(tx)
+			paymentRepository.SetEmployeeIdentifier(srv.employee)
 			payment := paymentRepository.Create(option.RentalPaymentOption{
 				RentalId: rental.ID,
 				Amount:   form.PaymentAmount,
@@ -248,15 +250,15 @@ func (srv *rentalService) Return(uuid string, form form2.RentalReturnForm) model
 		rental.Motorcycle = motorcycle
 		srv.customerService.SetTransaction(tx)
 		srv.customerService.SetEmployeeIdentifier(srv.employee)
-		srv.processBlacklist(rental.Customer, lateDay)
 
 		parser := parser.RentalParser{Object: rental}
 
-		activity.UseActivity{Employee: srv.employee}.SetReference(&rental).SetParser(&parser).SetNewProperty(constant.ACTION_CREATE).
-			Save(fmt.Sprintf("Return Rental [%d]", rental.ID))
+		activity.UseActivity{Employee: srv.employee}.SetReference(&rental).SetParser(&parser).SetNewProperty(constant.ACTION_UPDATE).
+			Save(fmt.Sprintf("Return Rental %s [%d]", rental.Number, rental.ID))
 
 		return nil
 	})
+	srv.processBlacklist(rental.Customer, lateDay)
 	return rental
 }
 
@@ -335,7 +337,7 @@ func (srv *rentalService) processBlacklist(customer model.Customer, lateDay int)
 	blacklistLimitDay := srv.settingConfigRepo.FirstByForm(form2.SettingConfigurationFilterForm{Key: constant.SETTING_CONFIGURATION_KEY_BLACKLIST_LIMIT_DAY})
 	limitDay := core.ToInt(blacklistLimitDay.Value)
 	if lateDay > limitDay {
-		srv.customerService.BlacklistCustomer(customer, constant.CUSTOMER_PASS_DAY_LIMIT_REASON)
+		srv.customerService.BlacklistCustomer(customer, "Customer exceeds the daily limit for return motorcycle")
 	}
 }
 

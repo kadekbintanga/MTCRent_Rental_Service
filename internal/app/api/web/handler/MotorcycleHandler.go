@@ -74,3 +74,12 @@ func (ctr MotorcycleHandler) Update(w http.ResponseWriter, r *http.Request) {
 	res := xtremeres.Response{Object: psr.First()}
 	res.Success(w)
 }
+
+func (ctr MotorcycleHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	srv := service.NewMotorcycleService()
+	srv.SetEmployeeIdentifier(data.AuthEmployee(r))
+
+	srv.Delete(mux.Vars(r)["uuid"])
+	res := xtremeres.Response{}
+	res.Success(w)
+}

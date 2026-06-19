@@ -19,6 +19,7 @@ import (
 
 type RentalPaymentService interface {
 	SetTransaction(tx *gorm.DB)
+	SetEmployeeIdentifier(employee data.EmployeeIdentifierData)
 
 	Create(rentalUUID string, form form2.RentalPaymentForm) model.RentalPayment
 }
@@ -48,6 +49,7 @@ func (srv *rentalPaymentService) Create(rentalUUID string, form form2.RentalPaym
 	var payment model.RentalPayment
 	config.PgSQL.Transaction(func(tx *gorm.DB) error {
 		srv.repository = repository.NewRentalPaymentRepository(tx)
+		srv.repository.SetEmployeeIdentifier(srv.employee)
 		payment = srv.repository.Create(option.RentalPaymentOption{
 			Number:   number.GenerateRentalPaymentNumber(),
 			RentalId: rental.ID,
@@ -57,7 +59,7 @@ func (srv *rentalPaymentService) Create(rentalUUID string, form form2.RentalPaym
 
 		parser := parser.RentalPaymentParser{Object: payment}
 		activity.UseActivity{Employee: srv.employee}.SetReference(&payment).SetParser(&parser).SetNewProperty(constant.ACTION_CREATE).
-			Save(fmt.Sprintf("Create payment [%d] for rental [%d]", payment.ID, rental.ID))
+			Save(fmt.Sprintf("Create payment %s [%d] for rental %s [%d]", payment.Number, payment.ID, rental.Number, rental.ID))
 
 		return nil
 	})

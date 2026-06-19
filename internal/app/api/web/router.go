@@ -45,6 +45,7 @@ func motorcycleRouter(router *mux.Router) {
 	router.HandleFunc("", motorcycleHandler.Create).Methods("POST")
 	router.HandleFunc("/{uuid}", motorcycleHandler.Detail).Methods("GET")
 	router.HandleFunc("/{uuid}", motorcycleHandler.Update).Methods("PUT")
+	router.HandleFunc("/{uuid}", motorcycleHandler.Delete).Methods("DELETE")
 }
 
 func settingRouter(router *mux.Router) {

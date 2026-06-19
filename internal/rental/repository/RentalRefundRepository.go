@@ -61,15 +61,12 @@ func (repo *rentalRefundRepository) PaginateByForm(form form.RentalRefundFilterF
 
 func (repo *rentalRefundRepository) Create(opt option.RentalRefundOption) model.RentalRefund {
 	rentalRefund := model.RentalRefund{
-		Number:   opt.Number,
-		RentalId: opt.RentalId,
-		Amount:   opt.Amount,
-		MethodId: opt.MethodId,
-	}
-
-	if repo.employee.ID != "" {
-		rentalRefund.CreatedBy = &repo.employee.ID
-		rentalRefund.CreatedByName = &repo.employee.FullName
+		Number:        opt.Number,
+		RentalId:      opt.RentalId,
+		Amount:        opt.Amount,
+		MethodId:      opt.MethodId,
+		CreatedBy:     &repo.employee.ID,
+		CreatedByName: &repo.employee.FullName,
 	}
 
 	err := repo.tx.Create(&rentalRefund).Error

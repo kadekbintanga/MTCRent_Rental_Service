@@ -23,6 +23,7 @@ type MotorcycleService interface {
 
 	Create(form form2.MotorcycleForm) model.Motorcycle
 	Update(uuid string, form form2.MotorcycleForm) model.Motorcycle
+	Delete(uuid string)
 }
 
 func NewMotorcycleService() MotorcycleService {
@@ -44,7 +45,7 @@ func (srv *motorcycleService) SetEmployeeIdentifier(employee data.EmployeeIdenti
 }
 
 func (srv *motorcycleService) Create(form form2.MotorcycleForm) model.Motorcycle {
-	motorcycle, brand := srv.prepareAndValidate(nil, &form)
+	motorcycle, brand := srv.prepareAndValidate(nil, &form, []string{})
 
 	config.PgSQL.Transaction(func(tx *gorm.DB) error {
 		srv.repository.SetTransaction(tx)
@@ -61,7 +62,7 @@ func (srv *motorcycleService) Create(form form2.MotorcycleForm) model.Motorcycle
 }
 
 func (srv *motorcycleService) Update(uuid string, form form2.MotorcycleForm) model.Motorcycle {
-	motorcycle, brand := srv.prepareAndValidate(&uuid, &form)
+	motorcycle, brand := srv.prepareAndValidate(&uuid, &form, []string{})
 
 	parser := parser.MotorcycleParser{Object: motorcycle}
 
@@ -80,8 +81,26 @@ func (srv *motorcycleService) Update(uuid string, form form2.MotorcycleForm) mod
 	return motorcycle
 }
 
+func (srv *motorcycleService) Delete(uuid string) {
+	motorcycle, _ := srv.prepareAndValidate(&uuid, nil, []string{"Rentals"})
+	if len(motorcycle.Rentals) > 0 {
+		error2.ErrXtremeInvalidPayload("Cannot delete motorcycle that has been rented")
+	}
+
+	config.PgSQL.Transaction(func(tx *gorm.DB) error {
+		srv.repository.SetTransaction(tx)
+
+		srv.repository.Delete(motorcycle)
+
+		activity.UseActivity{Employee: srv.employee, Action: constant.ACTION_DELETE}.SetReference(motorcycle).
+			Save(fmt.Sprintf("Delete Motorcycle %s [%d]", motorcycle.Name, motorcycle.ID))
+
+		return nil
+	})
+}
+
 /** --- UNEXPORTED FUNCTIONS --- */
-func (srv *motorcycleService) prepareAndValidate(uuid *string, form *form2.MotorcycleForm) (model.Motorcycle, model.MotorcycleComponentBrand) {
+func (srv *motorcycleService) prepareAndValidate(uuid *string, form *form2.MotorcycleForm, preloads []string) (model.Motorcycle, model.MotorcycleComponentBrand) {
 	srv.repository = repository.NewMotorcycleRepository()
 	srv.repository.SetEmployeeIdentifier(srv.employee)
 
@@ -91,7 +110,7 @@ func (srv *motorcycleService) prepareAndValidate(uuid *string, form *form2.Motor
 	needCheckBrand := false
 
 	if uuid != nil {
-		motorcycle = srv.repository.FirstByForm(form2.MotorcycleFilterForm{UUID: *uuid})
+		motorcycle = srv.repository.FirstByForm(form2.MotorcycleFilterForm{UUID: *uuid, Preloads: preloads})
 		if form != nil {
 			if !strings.EqualFold(motorcycle.PlateNumber, form.PlateNumber) {
 				needCheckPlateNumber = true

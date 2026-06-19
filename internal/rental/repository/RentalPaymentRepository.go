@@ -61,15 +61,12 @@ func (repo *rentalPaymentRepository) PaginateByForm(form form.RentalPaymentFilte
 
 func (repo *rentalPaymentRepository) Create(opt option.RentalPaymentOption) model.RentalPayment {
 	rentalPayment := model.RentalPayment{
-		Number:   opt.Number,
-		RentalId: opt.RentalId,
-		Amount:   opt.Amount,
-		MethodId: opt.MethodId,
-	}
-
-	if repo.employee.ID != "" {
-		rentalPayment.CreatedBy = &repo.employee.ID
-		rentalPayment.CreatedByName = &repo.employee.FullName
+		Number:        opt.Number,
+		RentalId:      opt.RentalId,
+		Amount:        opt.Amount,
+		MethodId:      opt.MethodId,
+		CreatedBy:     &repo.employee.ID,
+		CreatedByName: &repo.employee.FullName,
 	}
 
 	err := repo.tx.Create(&rentalPayment).Error

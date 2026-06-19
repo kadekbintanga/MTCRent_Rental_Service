@@ -8,6 +8,7 @@ import (
 	"service/internal/rental/service"
 
 	xtremeres "github.com/globalxtreme/go-core/v2/response"
+	"github.com/globalxtreme/go-identifier/data"
 	"github.com/gorilla/mux"
 )
 
@@ -34,6 +35,7 @@ func (ctr RentalPaymentHandler) Create(w http.ResponseWriter, r *http.Request) {
 	form.Validate()
 
 	srv := service.NewRentalPaymentService()
+	srv.SetEmployeeIdentifier(data.AuthEmployee(r))
 	payment := srv.Create(mux.Vars(r)["uuid"], form)
 
 	psr := parser.RentalPaymentParser{Object: payment}

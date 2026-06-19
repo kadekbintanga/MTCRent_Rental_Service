@@ -97,20 +97,17 @@ func (repo *motorcycleRepository) PaginateByForm(form form.MotorcycleFilterForm)
 
 func (repo *motorcycleRepository) Create(form form.MotorcycleForm) model.Motorcycle {
 	motorcycle := model.Motorcycle{
-		PlateNumber: strings.ToUpper(form.PlateNumber),
-		Name:        form.Name,
-		TypeId:      form.TypeId,
-		Year:        form.Year,
-		PricePerDay: form.PricePerDay,
-		StatusId:    form.StatusId,
-		BrandId:     form.BrandId,
-	}
-
-	if repo.employee.ID != "" {
-		motorcycle.CreatedBy = &repo.employee.ID
-		motorcycle.CreatedByName = &repo.employee.FullName
-		motorcycle.UpdatedBy = &repo.employee.ID
-		motorcycle.UpdatedByName = &repo.employee.FullName
+		PlateNumber:   strings.ToUpper(form.PlateNumber),
+		Name:          form.Name,
+		TypeId:        form.TypeId,
+		Year:          form.Year,
+		PricePerDay:   form.PricePerDay,
+		StatusId:      form.StatusId,
+		BrandId:       form.BrandId,
+		CreatedBy:     &repo.employee.ID,
+		CreatedByName: &repo.employee.FullName,
+		UpdatedBy:     &repo.employee.ID,
+		UpdatedByName: &repo.employee.FullName,
 	}
 
 	err := repo.tx.Create(&motorcycle).Error
@@ -129,11 +126,8 @@ func (repo *motorcycleRepository) Update(motorcycle model.Motorcycle, form form.
 	motorcycle.PricePerDay = form.PricePerDay
 	motorcycle.StatusId = form.StatusId
 	motorcycle.BrandId = form.BrandId
-
-	if repo.employee.ID != "" {
-		motorcycle.UpdatedBy = &repo.employee.ID
-		motorcycle.UpdatedByName = &repo.employee.FullName
-	}
+	motorcycle.UpdatedBy = &repo.employee.ID
+	motorcycle.UpdatedByName = &repo.employee.FullName
 
 	err := repo.tx.Updates(&motorcycle).Error
 	if err != nil {
@@ -144,11 +138,8 @@ func (repo *motorcycleRepository) Update(motorcycle model.Motorcycle, form form.
 
 func (repo *motorcycleRepository) UpdateStatus(motorcycle model.Motorcycle, form form.MotorcycleStatusUpdateForm) model.Motorcycle {
 	motorcycle.StatusId = form.StatusId
-
-	if repo.employee.ID != "" {
-		motorcycle.UpdatedBy = &repo.employee.ID
-		motorcycle.UpdatedByName = &repo.employee.FullName
-	}
+	motorcycle.UpdatedBy = &repo.employee.ID
+	motorcycle.UpdatedByName = &repo.employee.FullName
 
 	err := repo.tx.Updates(&motorcycle).Error
 	if err != nil {
@@ -159,10 +150,8 @@ func (repo *motorcycleRepository) UpdateStatus(motorcycle model.Motorcycle, form
 }
 
 func (repo *motorcycleRepository) Delete(motorcycle model.Motorcycle) {
-	if repo.employee.ID != "" {
-		motorcycle.UpdatedBy = &repo.employee.ID
-		motorcycle.UpdatedByName = &repo.employee.FullName
-	}
+	motorcycle.UpdatedBy = &repo.employee.ID
+	motorcycle.UpdatedByName = &repo.employee.FullName
 
 	err := repo.tx.Delete(&motorcycle).Error
 	if err != nil {

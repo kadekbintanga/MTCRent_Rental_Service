@@ -83,6 +83,7 @@ func (ctr RentalHandler) Update(w http.ResponseWriter, r *http.Request) {
 	form.Validate()
 
 	srv := service.NewRentalService()
+	srv.SetEmployeeIdentifier(data.AuthEmployee(r))
 	rental := srv.Update(mux.Vars(r)["uuid"], form)
 
 	psr := parser.RentalParser{Object: rental}

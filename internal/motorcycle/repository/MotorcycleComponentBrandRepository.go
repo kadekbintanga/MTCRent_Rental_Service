@@ -96,15 +96,12 @@ func (repo *motorcycleComponentBrandRepository) PaginateByForm(form form.Motorcy
 
 func (repo *motorcycleComponentBrandRepository) Create(form form.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand {
 	motorcycleBrand := model.MotorcycleComponentBrand{
-		Name:    strings.ToUpper(form.Name),
-		Default: false,
-	}
-
-	if repo.employee.ID != "" {
-		motorcycleBrand.CreatedBy = &repo.employee.ID
-		motorcycleBrand.CreatedByName = &repo.employee.FullName
-		motorcycleBrand.UpdatedBy = &repo.employee.ID
-		motorcycleBrand.UpdatedByName = &repo.employee.FullName
+		Name:          strings.ToUpper(form.Name),
+		Default:       false,
+		CreatedBy:     &repo.employee.ID,
+		CreatedByName: &repo.employee.FullName,
+		UpdatedBy:     &repo.employee.ID,
+		UpdatedByName: &repo.employee.FullName,
 	}
 
 	err := repo.tx.Create(&motorcycleBrand).Error
@@ -117,11 +114,8 @@ func (repo *motorcycleComponentBrandRepository) Create(form form.MotorcycleCompo
 
 func (repo *motorcycleComponentBrandRepository) Update(brand model.MotorcycleComponentBrand, form form.MotorcycleComponentBrandForm) model.MotorcycleComponentBrand {
 	brand.Name = strings.ToUpper(form.Name)
-
-	if repo.employee.ID != "" {
-		brand.UpdatedBy = &repo.employee.ID
-		brand.UpdatedByName = &repo.employee.FullName
-	}
+	brand.UpdatedBy = &repo.employee.ID
+	brand.UpdatedByName = &repo.employee.FullName
 
 	err := repo.tx.Updates(&brand).Error
 	if err != nil {
@@ -131,10 +125,8 @@ func (repo *motorcycleComponentBrandRepository) Update(brand model.MotorcycleCom
 }
 
 func (repo *motorcycleComponentBrandRepository) Delete(brand model.MotorcycleComponentBrand) {
-	if repo.employee.ID != "" {
-		brand.UpdatedBy = &repo.employee.ID
-		brand.UpdatedByName = &repo.employee.FullName
-	}
+	brand.UpdatedBy = &repo.employee.ID
+	brand.UpdatedByName = &repo.employee.FullName
 
 	err := repo.tx.Delete(&brand).Error
 	if err != nil {

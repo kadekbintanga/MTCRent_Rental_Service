@@ -55,8 +55,6 @@ func (sg *customerSaga) UpdateCustomerStatus(request *customer.CustomerUpdateSta
 	if result := resp.GetResult(); len(result) > 0 {
 		json.Unmarshal(result, &rollbackData)
 	}
-	rollbackData.CreatedBy = request.CreatedBy
-	rollbackData.CreatedByName = request.CreatedByName
 
 	sg.rollbackUpdateStatus = &rollbackData
 

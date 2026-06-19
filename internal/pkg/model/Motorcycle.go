@@ -18,7 +18,8 @@ type Motorcycle struct {
 	UpdatedBy     *string `gorm:"column:updatedBy;varchar(50);null"`
 	UpdatedByName *string `gorm:"column:updatedByName;varchar(250);null"`
 
-	Brand MotorcycleComponentBrand `gorm:"foreignKey:brandId"`
+	Brand   MotorcycleComponentBrand `gorm:"foreignKey:brandId"`
+	Rentals []Rental                 `gorm:"foreignKey:MotorcycleId"`
 }
 
 func (Motorcycle) TableName() string {
